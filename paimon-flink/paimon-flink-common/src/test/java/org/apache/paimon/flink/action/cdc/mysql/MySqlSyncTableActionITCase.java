@@ -257,6 +257,32 @@ public class MySqlSyncTableActionITCase extends MySqlActionITCaseBase {
                         "+I[2, 8, very long string, 80000000000, NULL, NULL, NULL]",
                         "+I[1, 9, nine, 90000000000, 99999.999, [110, 105, 110, 101, 46, 98, 105, 110, 46, 108, 111, 110, 103], 9.00000000009]");
         waitForResult(expected, table, rowType, primaryKeys);
+
+        // drop column
+        statement.executeUpdate("ALTER TABLE schema_evolution_1 DROP v5");
+        statement.executeUpdate("ALTER TABLE schema_evolution_2 DROP v5");
+        rowType =
+                RowType.of(
+                        new DataType[] {
+                                DataTypes.INT().notNull(),
+                                DataTypes.INT().notNull(),
+                                DataTypes.VARCHAR(20),
+                                DataTypes.BIGINT(),
+                                DataTypes.DECIMAL(8, 3),
+                                DataTypes.VARBINARY(20)
+                        },
+                        new String[] {"pt", "_id", "v1", "v2", "v3", "v4"});
+        expected =
+                Arrays.asList(
+                        "+I[1, 1, one, NULL, NULL, NULL]",
+                        "+I[1, 2, second, NULL, NULL, NULL]",
+                        "+I[2, 3, three, 30000000000, NULL, NULL]",
+                        "+I[2, 4, four, NULL, NULL, [102, 111, 117, 114, 46, 98, 105, 110, 46, 108, 111, 110, 103]]",
+                        "+I[1, 6, six, 60, NULL, NULL]",
+                        "+I[2, 7, seven, 70000000000, NULL, NULL]",
+                        "+I[2, 8, very long string, 80000000000, NULL, NULL]",
+                        "+I[1, 9, nine, 90000000000, 99999.999, [110, 105, 110, 101, 46, 98, 105, 110, 46, 108, 111, 110, 103]]");
+        waitForResult(expected, table, rowType, primaryKeys);
     }
 
     @Test
