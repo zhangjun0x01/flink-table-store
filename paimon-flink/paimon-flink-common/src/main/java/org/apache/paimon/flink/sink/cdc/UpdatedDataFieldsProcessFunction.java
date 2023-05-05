@@ -30,6 +30,7 @@ import org.apache.paimon.utils.Preconditions;
 
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,11 +71,22 @@ public class UpdatedDataFieldsProcessFunction extends ProcessFunction<List<DataF
     private List<SchemaChange> extractSchemaChanges(List<DataField> updatedDataFields) {
         RowType oldRowType = schemaManager.latest().get().logicalRowType();
         Map<String, DataField> oldFields = new HashMap<>();
-        for (DataField oldField : oldRowType.getFields()) {
-            oldFields.put(oldField.name(), oldField);
+        Map<String, DataField> newFields = new HashMap<>();
+        List<SchemaChange> result = new ArrayList<>();
+
+        for (DataField newField : updatedDataFields) {
+            newFields.put(newField.name(), newField);
         }
 
-        List<SchemaChange> result = new ArrayList<>();
+        for (DataField oldField : oldRowType.getFields()) {
+            oldFields.put(oldField.name(), oldField);
+            //drop column
+            if (!newFields.containsKey(oldField.name())) {
+                result.add(SchemaChange.dropColumn(oldField.name()));
+            }
+        }
+
+
         for (DataField newField : updatedDataFields) {
             if (oldFields.containsKey(newField.name())) {
                 DataField oldField = oldFields.get(newField.name());
@@ -84,14 +96,14 @@ public class UpdatedDataFieldsProcessFunction extends ProcessFunction<List<DataF
                     if (!Objects.equals(oldField.description(), newField.description())) {
                         result.add(
                                 SchemaChange.updateColumnComment(
-                                        new String[] {newField.name()}, newField.description()));
+                                        new String[]{newField.name()}, newField.description()));
                     }
                 } else {
                     result.add(SchemaChange.updateColumnType(newField.name(), newField.type()));
                     if (newField.description() != null) {
                         result.add(
                                 SchemaChange.updateColumnComment(
-                                        new String[] {newField.name()}, newField.description()));
+                                        new String[]{newField.name()}, newField.description()));
                     }
                 }
             } else {
@@ -147,7 +159,7 @@ public class UpdatedDataFieldsProcessFunction extends ProcessFunction<List<DataF
                                     "Cannot convert field %s from type %s to %s",
                                     updateColumnType.fieldName(), oldType, newType));
             }
-        } else if (schemaChange instanceof SchemaChange.UpdateColumnComment) {
+        } else if (schemaChange instanceof SchemaChange.UpdateColumnComment || schemaChange instanceof SchemaChange.DropColumn) {
             schemaManager.commitChanges(schemaChange);
         } else {
             throw new UnsupportedOperationException(
@@ -213,7 +225,9 @@ public class UpdatedDataFieldsProcessFunction extends ProcessFunction<List<DataF
      */
     public enum ConvertAction {
 
-        /** {@code oldType} can be converted to {@code newType}. */
+        /**
+         * {@code oldType} can be converted to {@code newType}.
+         */
         CONVERT,
 
         /**
