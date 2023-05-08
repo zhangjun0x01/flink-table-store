@@ -70,6 +70,17 @@ public class SparkWriteITCase {
     }
 
     @Test
+    public void testInsertOverwrite() {
+        spark.sql(
+                "CREATE TABLE T (a INT, b INT, c STRING) TBLPROPERTIES"
+                        + " ('primary-key'='a')");
+        spark.sql("INSERT INTO T VALUES(1,1,'aaa'),(2,2,'bbb')");
+        List<Row> rows = spark.sql("SELECT * FROM T").collectAsList();
+        assertThat(rows.toString()).isEqualTo("[[1,1,aaa], [2,2,bbb]]");
+        spark.sql("INSERT OVERWRITE T VALUES(3,3,'ccc')");
+    }
+
+    @Test
     public void testWritePartitionTable() {
         spark.sql(
                 "CREATE TABLE T (a INT, b INT, c STRING) PARTITIONED BY (a) TBLPROPERTIES"
