@@ -21,15 +21,18 @@ package org.apache.paimon.spark;
 import org.apache.paimon.operation.Lock;
 import org.apache.paimon.table.Table;
 
+import org.apache.spark.sql.connector.write.SupportsDynamicOverwrite;
+import org.apache.spark.sql.connector.write.SupportsOverwrite;
 import org.apache.spark.sql.connector.write.Write;
 import org.apache.spark.sql.connector.write.WriteBuilder;
+import org.apache.spark.sql.sources.Filter;
 
 /**
  * Spark {@link WriteBuilder}.
  *
  * <p>TODO: Support overwrite.
  */
-public class SparkWriteBuilder implements WriteBuilder {
+public class SparkWriteBuilder implements WriteBuilder , SupportsOverwrite , SupportsDynamicOverwrite {
 
     private final Table table;
     private final Lock.Factory lockFactory;
@@ -42,5 +45,15 @@ public class SparkWriteBuilder implements WriteBuilder {
     @Override
     public Write build() {
         return new SparkWrite(table, lockFactory);
+    }
+
+    @Override
+    public WriteBuilder overwrite(Filter[] filters) {
+        return null;
+    }
+
+    @Override
+    public WriteBuilder overwriteDynamicPartitions() {
+        return null;
     }
 }
