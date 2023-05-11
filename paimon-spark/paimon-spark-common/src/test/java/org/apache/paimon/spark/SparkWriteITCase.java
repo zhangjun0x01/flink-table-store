@@ -22,6 +22,7 @@ import org.apache.paimon.fs.Path;
 
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.internal.SQLConf;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,6 +43,7 @@ public class SparkWriteITCase {
     public static void startMetastoreAndSpark(@TempDir java.nio.file.Path tempDir) {
         Path warehousePath = new Path("file:" + tempDir.toString());
         spark = SparkSession.builder().master("local[2]").getOrCreate();
+        spark.conf().set(SQLConf.PARTITION_OVERWRITE_MODE().key(), "dynamic");
         spark.conf().set("spark.sql.catalog.paimon", SparkCatalog.class.getName());
         spark.conf().set("spark.sql.catalog.paimon.warehouse", warehousePath.toString());
         spark.sql("CREATE DATABASE paimon.db");
