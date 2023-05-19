@@ -40,6 +40,7 @@ import org.apache.paimon.utils.Pool;
 import org.apache.parquet.ParquetReadOptions;
 import org.apache.parquet.column.ColumnDescriptor;
 import org.apache.parquet.column.page.PageReadStore;
+import org.apache.parquet.filter2.compat.FilterCompat;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.ParquetInputFormat;
 import org.apache.parquet.schema.GroupType;
@@ -79,11 +80,14 @@ public class ParquetReaderFactory implements FormatReaderFactory {
     private final int batchSize;
     private final Set<Integer> unknownFieldsIndices = new HashSet<>();
 
-    public ParquetReaderFactory(Options conf, RowType projectedType, int batchSize) {
+    private final  FilterCompat.Filter filter;
+
+    public ParquetReaderFactory(Options conf, RowType projectedType, int batchSize, @Nullable FilterCompat.Filter filter) {
         this.conf = conf;
         this.projectedFields = projectedType.getFieldNames().toArray(new String[0]);
         this.projectedTypes = projectedType.getFieldTypes().toArray(new DataType[0]);
         this.batchSize = batchSize;
+        this.filter = filter;
     }
 
     @Override
@@ -125,6 +129,8 @@ public class ParquetReaderFactory implements FormatReaderFactory {
         if (badRecordThresh != null) {
             builder.set(BAD_RECORD_THRESHOLD_CONF_KEY, badRecordThresh);
         }
+
+        builder.withRecordFilter(filter);
     }
 
     /** Clips `parquetSchema` according to `fieldNames`. */
