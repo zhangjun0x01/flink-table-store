@@ -2,17 +2,17 @@ package org.apache.paimon.format.parquet.filter;
 
 import org.apache.paimon.predicate.FieldRef;
 import org.apache.paimon.predicate.FunctionVisitor;
+
 import org.apache.parquet.filter2.predicate.FilterPredicate;
 
 import java.util.List;
 import java.util.Optional;
 
 public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional<FilterPredicate>> {
-    public static final ParquetPredicateFunctionVisitor VISITOR = new ParquetPredicateFunctionVisitor();
+    public static final ParquetPredicateFunctionVisitor VISITOR =
+            new ParquetPredicateFunctionVisitor();
 
-    private ParquetPredicateFunctionVisitor() {
-
-    }
+    private ParquetPredicateFunctionVisitor() {}
 
     @Override
     public Optional<FilterPredicate> visitIsNotNull(FieldRef fieldRef) {

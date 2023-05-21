@@ -80,9 +80,13 @@ public class ParquetReaderFactory implements FormatReaderFactory {
     private final int batchSize;
     private final Set<Integer> unknownFieldsIndices = new HashSet<>();
 
-    private final  FilterCompat.Filter filter;
+    private final FilterCompat.Filter filter;
 
-    public ParquetReaderFactory(Options conf, RowType projectedType, int batchSize, @Nullable FilterCompat.Filter filter) {
+    public ParquetReaderFactory(
+            Options conf,
+            RowType projectedType,
+            int batchSize,
+            @Nullable FilterCompat.Filter filter) {
         this.conf = conf;
         this.projectedFields = projectedType.getFieldNames().toArray(new String[0]);
         this.projectedTypes = projectedType.getFieldTypes().toArray(new DataType[0]);
