@@ -18,7 +18,17 @@
 
 package org.apache.paimon.format.parquet.filter;
 
-import org.apache.paimon.predicate.*;
+import org.apache.paimon.predicate.Equal;
+import org.apache.paimon.predicate.FieldRef;
+import org.apache.paimon.predicate.FunctionVisitor;
+import org.apache.paimon.predicate.GreaterOrEqual;
+import org.apache.paimon.predicate.GreaterThan;
+import org.apache.paimon.predicate.IsNotNull;
+import org.apache.paimon.predicate.IsNull;
+import org.apache.paimon.predicate.LeafFunction;
+import org.apache.paimon.predicate.LessOrEqual;
+import org.apache.paimon.predicate.LessThan;
+import org.apache.paimon.predicate.NotEqual;
 import org.apache.paimon.types.DataTypeRoot;
 
 import org.apache.parquet.filter2.predicate.FilterApi;
