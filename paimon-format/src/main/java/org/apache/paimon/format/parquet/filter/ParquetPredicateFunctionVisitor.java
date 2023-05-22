@@ -27,15 +27,19 @@ import org.apache.parquet.filter2.predicate.Operators;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import static org.apache.paimon.types.DataTypeRoot.INTEGER;
 
-/** aaaa. */
+/**
+ * aaaa.
+ */
 public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional<FilterPredicate>> {
     public static final ParquetPredicateFunctionVisitor VISITOR =
             new ParquetPredicateFunctionVisitor();
 
-    private ParquetPredicateFunctionVisitor() {}
+    private ParquetPredicateFunctionVisitor() {
+    }
 
     @Override
     public Optional<FilterPredicate> visitIsNotNull(FieldRef fieldRef) {
@@ -74,7 +78,11 @@ public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional
 
     @Override
     public Optional<FilterPredicate> visitEqual(FieldRef fieldRef, Object literal) {
-        return convertBinary(fieldRef, literal);
+        return convertBinary(fieldRef, literal, Operators.Eq<T extends Comparable<T>>::new);
+    }
+
+    private Optional<FilterPredicate> convertBinary(FieldRef fieldRef, Object literal,
+                                                    BiFunction<Operators.Column<T>, T, FilterPredicate> func) {
     }
 
     private <T> Optional<FilterPredicate> convertBinary(FieldRef fieldRef, Object literal) {

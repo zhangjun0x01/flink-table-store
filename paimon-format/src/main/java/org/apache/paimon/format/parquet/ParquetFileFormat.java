@@ -24,6 +24,7 @@ import org.apache.paimon.format.FileFormatFactory.FormatContext;
 import org.apache.paimon.format.FileStatsExtractor;
 import org.apache.paimon.format.FormatReaderFactory;
 import org.apache.paimon.format.FormatWriterFactory;
+import org.apache.paimon.format.orc.filter.OrcFilters;
 import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor;
 import org.apache.paimon.format.parquet.writer.RowDataParquetBuilder;
 import org.apache.paimon.options.Options;
@@ -32,14 +33,18 @@ import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.Projection;
 
 import org.apache.parquet.filter2.compat.FilterCompat;
+import org.apache.parquet.filter2.predicate.FilterApi;
 import org.apache.parquet.filter2.predicate.FilterPredicate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.apache.paimon.format.parquet.ParquetFileFormatFactory.IDENTIFIER;
 
-/** Parquet {@link FileFormat}. */
+/**
+ * Parquet {@link FileFormat}.
+ */
 public class ParquetFileFormat extends FileFormat {
 
     private final FormatContext formatContext;
@@ -58,13 +63,19 @@ public class ParquetFileFormat extends FileFormat {
     public FormatReaderFactory createReaderFactory(
             RowType type, int[][] projection, List<Predicate> filters) {
 
-        FilterCompat.Filter filter = null;
+        List<FilterPredicate> parquetPredicates = new ArrayList<>();
+
+
         if (filters != null) {
             for (Predicate pred : filters) {
-                Optional<FilterPredicate> orcPred =
+                Optional<FilterPredicate> filterPredicate =
                         pred.visit(ParquetPredicateFunctionVisitor.VISITOR);
+                filterPredicate.ifPresent(parquetPredicates::add);
             }
         }
+
+        Optional<FilterPredicate> filterPredicate = parquetPredicates.stream().reduce(FilterApi::and);
+        FilterCompat.Filter filter = filterPredicate.map(FilterCompat::get).orElse(FilterCompat.NOOP);
 
         return new ParquetReaderFactory(
                 getParquetConfiguration(formatContext.formatOptions()),
