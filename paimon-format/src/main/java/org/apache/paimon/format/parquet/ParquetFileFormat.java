@@ -24,6 +24,7 @@ import org.apache.paimon.format.FileFormatFactory.FormatContext;
 import org.apache.paimon.format.FileStatsExtractor;
 import org.apache.paimon.format.FormatReaderFactory;
 import org.apache.paimon.format.FormatWriterFactory;
+import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor;
 import org.apache.paimon.format.parquet.writer.RowDataParquetBuilder;
 import org.apache.paimon.options.Options;
 import org.apache.paimon.predicate.Predicate;
@@ -31,6 +32,7 @@ import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.Projection;
 
 import org.apache.parquet.filter2.compat.FilterCompat;
+import org.apache.parquet.filter2.predicate.FilterPredicate;
 
 import java.util.List;
 import java.util.Optional;
@@ -57,11 +59,12 @@ public class ParquetFileFormat extends FileFormat {
             RowType type, int[][] projection, List<Predicate> filters) {
 
         FilterCompat.Filter filter = null;
-        //        if (filters != null) {
-        //            Optional<FilterCompat.Filter> orcPred =
-        //                    pred.visit(ParquetPredicateFunctionVisitor.VISITOR);
-        //            filter = orcPred.orElse(null);
-        //        }
+        if (filters != null) {
+            for (Predicate pred : filters) {
+                Optional<FilterPredicate> orcPred =
+                        pred.visit(ParquetPredicateFunctionVisitor.VISITOR);
+            }
+        }
 
         return new ParquetReaderFactory(
                 getParquetConfiguration(formatContext.formatOptions()),
