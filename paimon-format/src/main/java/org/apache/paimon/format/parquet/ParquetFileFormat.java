@@ -28,6 +28,7 @@ import org.apache.paimon.format.orc.filter.OrcFilters;
 import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor;
 import org.apache.paimon.format.parquet.writer.RowDataParquetBuilder;
 import org.apache.paimon.options.Options;
+import org.apache.paimon.predicate.LeafPredicate;
 import org.apache.paimon.predicate.Predicate;
 import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.Projection;
@@ -68,8 +69,13 @@ public class ParquetFileFormat extends FileFormat {
 
         if (filters != null) {
             for (Predicate pred : filters) {
-                Optional<FilterPredicate> filterPredicate =
-                        pred.visit(ParquetPredicateFunctionVisitor.VISITOR);
+
+                ParquetPredicateFunctionVisitor visitor = new ParquetPredicateFunctionVisitor();
+                if (pred instanceof LeafPredicate) {
+                    LeafPredicate leafPredicate = (LeafPredicate) pred;
+                    visitor = new ParquetPredicateFunctionVisitor(leafPredicate.function());
+                }
+                Optional<FilterPredicate> filterPredicate = pred.visit(visitor);
                 filterPredicate.ifPresent(parquetPredicates::add);
             }
         }
