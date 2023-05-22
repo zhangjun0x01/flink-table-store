@@ -122,7 +122,8 @@ public class ParquetReaderFactory implements FormatReaderFactory {
         builder.useDictionaryFilter(
                 conf.getBoolean(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, true));
         builder.useStatsFilter(conf.getBoolean(ParquetInputFormat.STATS_FILTERING_ENABLED, true));
-        boolean useRecordFilter = conf.getBoolean(ParquetInputFormat.RECORD_FILTERING_ENABLED, true);
+        boolean useRecordFilter =
+                conf.getBoolean(ParquetInputFormat.RECORD_FILTERING_ENABLED, true);
         if (useRecordFilter) {
             builder.useRecordFilter(true);
             builder.withRecordFilter(filter);
@@ -140,12 +141,9 @@ public class ParquetReaderFactory implements FormatReaderFactory {
         if (badRecordThresh != null) {
             builder.set(BAD_RECORD_THRESHOLD_CONF_KEY, badRecordThresh);
         }
-
     }
 
-    /**
-     * Clips `parquetSchema` according to `fieldNames`.
-     */
+    /** Clips `parquetSchema` according to `fieldNames`. */
     private MessageType clipParquetSchema(GroupType parquetSchema) {
         Type[] types = new Type[projectedFields.length];
         for (int i = 0; i < projectedFields.length; ++i) {
@@ -264,14 +262,10 @@ public class ParquetReaderFactory implements FormatReaderFactory {
 
         private final Pool<ParquetReaderBatch> pool;
 
-        /**
-         * The number of rows that have been returned.
-         */
+        /** The number of rows that have been returned. */
         private long rowsReturned;
 
-        /**
-         * The number of rows that have been reading, including the current in flight row group.
-         */
+        /** The number of rows that have been reading, including the current in flight row group. */
         private long totalCountLoadedSoFar;
 
         /**
@@ -307,9 +301,7 @@ public class ParquetReaderFactory implements FormatReaderFactory {
             return batch.convertAndGetIterator();
         }
 
-        /**
-         * Advances to the next batch of rows. Returns false if there are no more.
-         */
+        /** Advances to the next batch of rows. Returns false if there are no more. */
         private boolean nextBatch(ParquetReaderBatch batch) throws IOException {
             for (WritableColumnVector v : batch.writableVectors) {
                 v.reset();

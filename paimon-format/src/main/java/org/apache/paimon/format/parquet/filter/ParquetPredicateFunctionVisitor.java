@@ -20,6 +20,7 @@ package org.apache.paimon.format.parquet.filter;
 
 import org.apache.paimon.predicate.*;
 import org.apache.paimon.types.DataTypeRoot;
+
 import org.apache.parquet.filter2.predicate.FilterApi;
 import org.apache.parquet.filter2.predicate.FilterPredicate;
 import org.apache.parquet.filter2.predicate.Operators;
@@ -28,9 +29,7 @@ import org.apache.parquet.io.api.Binary;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * aaaa.
- */
+/** aaaa. */
 public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional<FilterPredicate>> {
     private final LeafFunction function;
 
@@ -107,7 +106,6 @@ public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional
         return Optional.empty();
     }
 
-
     private FilterPredicate predicate(FieldRef fieldRef, Object literal) {
         DataTypeRoot type = fieldRef.type().getTypeRoot();
         String name = fieldRef.name();
@@ -141,10 +139,12 @@ public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional
                 return pred(binaryColumn, toParquetObject(type, literal));
         }
 
-        throw new UnsupportedOperationException("Cannot convert to Parquet filter: " + fieldRef.name());
+        throw new UnsupportedOperationException(
+                "Cannot convert to Parquet filter: " + fieldRef.name());
     }
 
-    private <C extends Comparable<C>, COL extends Operators.Column<C> & Operators.SupportsLtGt> FilterPredicate pred(COL col, C value) {
+    private <C extends Comparable<C>, COL extends Operators.Column<C> & Operators.SupportsLtGt>
+            FilterPredicate pred(COL col, C value) {
         if (function instanceof Equal) {
             return FilterApi.eq(col, value);
         } else if (function instanceof NotEqual) {
