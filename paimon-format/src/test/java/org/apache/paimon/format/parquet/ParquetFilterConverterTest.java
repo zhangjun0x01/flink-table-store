@@ -18,25 +18,24 @@
 
 package org.apache.paimon.format.parquet;
 
-import org.apache.hadoop.hive.ql.io.sarg.PredicateLeaf;
-import org.apache.paimon.format.orc.filter.OrcFilters;
-import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor;
-import org.apache.paimon.predicate.LeafPredicate;
+import org.apache.paimon.format.orc.filter.OrcPredicateFunctionVisitor;
+import org.apache.paimon.format.parquet.filter.ParquetFilters;
+import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor1;
 import org.apache.paimon.predicate.Predicate;
 import org.apache.paimon.predicate.PredicateBuilder;
 import org.apache.paimon.types.BigIntType;
 import org.apache.paimon.types.DataField;
 import org.apache.paimon.types.RowType;
-
-import org.apache.parquet.filter2.predicate.FilterApi;
-import org.apache.parquet.filter2.predicate.FilterPredicate;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Unit Tests for {@link ParquetPredicateFunctionVisitor1}. */
 public class ParquetFilterConverterTest {
     @Test
     public void testApplyPredicate() {
@@ -45,38 +44,78 @@ public class ParquetFilterConverterTest {
                         new RowType(
                                 Collections.singletonList(
                                         new DataField(0, "long1", new BigIntType()))));
-//        test(builder.isNull(0), FilterApi.eq(FilterApi.longColumn("long1"), null));
-//        test(builder.isNotNull(0), FilterApi.notEq(FilterApi.longColumn("long1"), null));
-//        test(builder.equal(0, 10L), FilterApi.eq(FilterApi.longColumn("long1"), 10L));
-//        test(builder.notEqual(0, 10L), FilterApi.notEq(FilterApi.longColumn("long1"), 10L));
-//
-//        test(builder.lessThan(0, 10L), FilterApi.lt(FilterApi.longColumn("long1"), 10L));
-//        test(builder.lessOrEqual(0, 10L), FilterApi.ltEq(FilterApi.longColumn("long1"), 10L));
-//        test(builder.greaterThan(0, 10L), FilterApi.gt(FilterApi.longColumn("long1"), 10L));
-//        test(builder.greaterOrEqual(0, 10L), FilterApi.gtEq(FilterApi.longColumn("long1"), 10L));
+        test(builder.isNull(0), new ParquetFilters.IsNull("long1", new BigIntType()));
+        test(
+                builder.isNotNull(0),
+                new ParquetFilters.Not(new ParquetFilters.IsNull("long1", new BigIntType())));
+        test(builder.equal(0, 10L), new ParquetFilters.Equals("long1", new BigIntType(), 10));
+        test(
+                builder.notEqual(0, 10L),
+                new ParquetFilters.Not(new ParquetFilters.Equals("long1", new BigIntType(), 10)));
+        test(
+                builder.lessThan(0, 10L),
+                new ParquetFilters.LessThan("long1", new BigIntType(), 10));
+        test(
+                builder.lessOrEqual(0, 10L),
+                new ParquetFilters.LessThanEquals("long1", new BigIntType(), 10));
+        test(
+                builder.greaterThan(0, 10L),
+                new ParquetFilters.Not(
+                        new ParquetFilters.LessThanEquals("long1", new BigIntType(), 10)));
+        test(
+                builder.greaterOrEqual(0, 10L),
+                new ParquetFilters.Not(new ParquetFilters.LessThan("long1", new BigIntType(), 10)));
 
         test(
                 builder.in(0, Arrays.asList(1L, 2L, 3L)),
-                FilterApi.or(
-                        FilterApi.or(
-                                FilterApi.gtEq(FilterApi.longColumn("long1"), 1L),
-                                FilterApi.gtEq(FilterApi.longColumn("long1"), 2L)),
-                        FilterApi.gtEq(FilterApi.longColumn("long1"), 3L)));
-
+                new ParquetFilters.Or(
+                        new ParquetFilters.Or(
+                                new ParquetFilters.Equals("long1", new BigIntType(), 1),
+                                new ParquetFilters.Equals("long1", new BigIntType(), 2)),
+                        new ParquetFilters.Equals("long1", new BigIntType(), 3)));
 
         test(
                 builder.between(0, 1L, 3L),
-                FilterApi.and(
-                        FilterApi.gtEq(FilterApi.longColumn("long1"), 1L),
-                        FilterApi.ltEq(FilterApi.longColumn("long1"), 3L)));
+                new ParquetFilters.And(
+                        new ParquetFilters.Not(
+                                new ParquetFilters.LessThan("long1", new BigIntType(), 1)),
+                        new ParquetFilters.LessThanEquals("long1", new BigIntType(), 3)));
+
+        test(
+                builder.notIn(0, Arrays.asList(1L, 2L, 3L)),
+                new ParquetFilters.And(
+                        new ParquetFilters.And(
+                                new ParquetFilters.Not(
+                                        new ParquetFilters.Equals("long1", new BigIntType(), 1)),
+                                new ParquetFilters.Not(
+                                        new ParquetFilters.Equals(
+                                                "long1", new BigIntType(), 2))),
+                        new ParquetFilters.Not(
+                                new ParquetFilters.Equals("long1", new BigIntType(), 3))));
+
+        assertThat(
+                builder.in(
+                                0,
+                                LongStream.range(1L, 22L)
+                                        .boxed()
+                                        .collect(Collectors.toList()))
+                        .visit(OrcPredicateFunctionVisitor.VISITOR)
+                        .isPresent())
+                .isFalse();
+
+        assertThat(
+                builder.notIn(
+                                0,
+                                LongStream.range(1L, 22L)
+                                        .boxed()
+                                        .collect(Collectors.toList()))
+                        .visit(OrcPredicateFunctionVisitor.VISITOR)
+                        .isPresent())
+                .isFalse();
     }
 
-    private void test(Predicate predicate, FilterPredicate filterPredicate) {
-        ParquetPredicateFunctionVisitor visitor = new ParquetPredicateFunctionVisitor();
-        if (predicate instanceof LeafPredicate) {
-            LeafPredicate leafPredicate = (LeafPredicate) predicate;
-            visitor = new ParquetPredicateFunctionVisitor(leafPredicate.function(), null);
-        }
-        assertThat(predicate.visit(visitor).get()).hasToString(filterPredicate.toString());
+    private void test(Predicate predicate, ParquetFilters.Predicate filterPredicate) {
+        assertThat(predicate.visit(ParquetPredicateFunctionVisitor1.VISITOR).get())
+                .hasToString(filterPredicate.toString());
     }
 }

@@ -24,11 +24,10 @@ import org.apache.paimon.format.FileFormatFactory.FormatContext;
 import org.apache.paimon.format.FileStatsExtractor;
 import org.apache.paimon.format.FormatReaderFactory;
 import org.apache.paimon.format.FormatWriterFactory;
-import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor;
+import org.apache.paimon.format.parquet.filter.ParquetFilters;
+import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor1;
 import org.apache.paimon.format.parquet.writer.RowDataParquetBuilder;
 import org.apache.paimon.options.Options;
-import org.apache.paimon.predicate.CompoundPredicate;
-import org.apache.paimon.predicate.LeafPredicate;
 import org.apache.paimon.predicate.Predicate;
 import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.Projection;
@@ -69,19 +68,24 @@ public class ParquetFileFormat extends FileFormat {
         if (filters != null) {
             for (Predicate pred : filters) {
 
-                ParquetPredicateFunctionVisitor visitor = new ParquetPredicateFunctionVisitor();
-                if (pred instanceof LeafPredicate) {
-                    LeafPredicate leafPredicate = (LeafPredicate) pred;
-                    visitor = new ParquetPredicateFunctionVisitor(leafPredicate.function(), null);
-                }
+//                ParquetPredicateFunctionVisitor visitor = new ParquetPredicateFunctionVisitor();
+//                if (pred instanceof LeafPredicate) {
+//                    LeafPredicate leafPredicate = (LeafPredicate) pred;
+//                    visitor = new ParquetPredicateFunctionVisitor(leafPredicate.function(), null);
+//                }
+//
+//                if (pred instanceof CompoundPredicate) {
+//                    CompoundPredicate compoundPredicate = (CompoundPredicate) pred;
+//                    visitor = new ParquetPredicateFunctionVisitor(null, compoundPredicate.function());
+//                }
 
-                if (pred instanceof CompoundPredicate) {
-                    CompoundPredicate compoundPredicate = (CompoundPredicate) pred;
-                    visitor = new ParquetPredicateFunctionVisitor(null, compoundPredicate.function());
+                Optional<ParquetFilters.Predicate> filterPredicate = pred.visit(ParquetPredicateFunctionVisitor1.VISITOR);
+                if (filterPredicate.isPresent()) {
+                    FilterPredicate predicate = filterPredicate.get().toParquetPredicate();
+                    if (null != predicate) {
+                        parquetPredicates.add(predicate);
+                    }
                 }
-
-                Optional<FilterPredicate> filterPredicate = pred.visit(visitor);
-                filterPredicate.ifPresent(parquetPredicates::add);
             }
         }
 
