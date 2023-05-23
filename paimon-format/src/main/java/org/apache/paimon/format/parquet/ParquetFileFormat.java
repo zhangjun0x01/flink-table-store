@@ -27,6 +27,7 @@ import org.apache.paimon.format.FormatWriterFactory;
 import org.apache.paimon.format.parquet.filter.ParquetPredicateFunctionVisitor;
 import org.apache.paimon.format.parquet.writer.RowDataParquetBuilder;
 import org.apache.paimon.options.Options;
+import org.apache.paimon.predicate.CompoundPredicate;
 import org.apache.paimon.predicate.LeafPredicate;
 import org.apache.paimon.predicate.Predicate;
 import org.apache.paimon.types.RowType;
@@ -42,7 +43,9 @@ import java.util.Optional;
 
 import static org.apache.paimon.format.parquet.ParquetFileFormatFactory.IDENTIFIER;
 
-/** Parquet {@link FileFormat}. */
+/**
+ * Parquet {@link FileFormat}.
+ */
 public class ParquetFileFormat extends FileFormat {
 
     private final FormatContext formatContext;
@@ -69,8 +72,14 @@ public class ParquetFileFormat extends FileFormat {
                 ParquetPredicateFunctionVisitor visitor = new ParquetPredicateFunctionVisitor();
                 if (pred instanceof LeafPredicate) {
                     LeafPredicate leafPredicate = (LeafPredicate) pred;
-                    visitor = new ParquetPredicateFunctionVisitor(leafPredicate.function());
+                    visitor = new ParquetPredicateFunctionVisitor(leafPredicate.function(), null);
                 }
+
+                if (pred instanceof CompoundPredicate) {
+                    CompoundPredicate compoundPredicate = (CompoundPredicate) pred;
+                    visitor = new ParquetPredicateFunctionVisitor(null, compoundPredicate.function());
+                }
+
                 Optional<FilterPredicate> filterPredicate = pred.visit(visitor);
                 filterPredicate.ifPresent(parquetPredicates::add);
             }

@@ -18,17 +18,8 @@
 
 package org.apache.paimon.format.parquet.filter;
 
-import org.apache.paimon.predicate.Equal;
-import org.apache.paimon.predicate.FieldRef;
-import org.apache.paimon.predicate.FunctionVisitor;
-import org.apache.paimon.predicate.GreaterOrEqual;
-import org.apache.paimon.predicate.GreaterThan;
-import org.apache.paimon.predicate.IsNotNull;
-import org.apache.paimon.predicate.IsNull;
-import org.apache.paimon.predicate.LeafFunction;
-import org.apache.paimon.predicate.LessOrEqual;
-import org.apache.paimon.predicate.LessThan;
-import org.apache.paimon.predicate.NotEqual;
+import org.apache.paimon.predicate.*;
+import org.apache.paimon.shade.guava30.com.google.common.base.Function;
 import org.apache.paimon.types.DataTypeRoot;
 
 import org.apache.parquet.filter2.predicate.FilterApi;
@@ -39,15 +30,19 @@ import org.apache.parquet.io.api.Binary;
 import java.util.List;
 import java.util.Optional;
 
-/** aaaa. */
+/**
+ * aaaa.
+ */
 public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional<FilterPredicate>> {
-    private final LeafFunction function;
+    private final LeafFunction leafFunction;
+    private final CompoundPredicate.Function function;
 
     public ParquetPredicateFunctionVisitor() {
-        this(null);
+        this(null,null);
     }
 
-    public ParquetPredicateFunctionVisitor(LeafFunction function) {
+    public ParquetPredicateFunctionVisitor(LeafFunction leafFunction, CompoundPredicate.Function function) {
+        this.leafFunction = leafFunction;
         this.function = function;
     }
 
@@ -108,12 +103,30 @@ public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional
 
     @Override
     public Optional<FilterPredicate> visitAnd(List<Optional<FilterPredicate>> children) {
-        return Optional.empty();
+        if (children.size() != 2) {
+            throw new RuntimeException("Illegal and children: " + children.size());
+        }
+
+        Optional<FilterPredicate> c1 = children.get(0);
+        if (!c1.isPresent()) {
+            return Optional.empty();
+        }
+        Optional<FilterPredicate> c2 = children.get(1);
+        return c2.map(value -> FilterApi.and(c1.get(), value));
     }
 
     @Override
     public Optional<FilterPredicate> visitOr(List<Optional<FilterPredicate>> children) {
-        return Optional.empty();
+        if (children.size() != 2) {
+            throw new RuntimeException("Illegal and children: " + children.size());
+        }
+
+        Optional<FilterPredicate> c1 = children.get(0);
+        if (!c1.isPresent()) {
+            return Optional.empty();
+        }
+        Optional<FilterPredicate> c2 = children.get(1);
+        return c2.map(value -> FilterApi.or(c1.get(), value));
     }
 
     private FilterPredicate predicate(FieldRef fieldRef, Object literal) {
@@ -122,9 +135,9 @@ public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional
         switch (type) {
             case BOOLEAN:
                 Operators.BooleanColumn col = FilterApi.booleanColumn(name);
-                if (function instanceof Equal) {
+                if (leafFunction instanceof Equal) {
                     return FilterApi.eq(col, toParquetObject(type, literal));
-                } else if (function instanceof NotEqual) {
+                } else if (leafFunction instanceof NotEqual) {
                     return FilterApi.eq(col, toParquetObject(type, literal));
                 }
                 break;
@@ -154,25 +167,25 @@ public class ParquetPredicateFunctionVisitor implements FunctionVisitor<Optional
     }
 
     private <C extends Comparable<C>, COL extends Operators.Column<C> & Operators.SupportsLtGt>
-            FilterPredicate pred(COL col, C value) {
-        if (function instanceof Equal) {
+    FilterPredicate pred(COL col, C value) {
+        if (leafFunction instanceof Equal) {
             return FilterApi.eq(col, value);
-        } else if (function instanceof NotEqual) {
+        } else if (leafFunction instanceof NotEqual) {
             return FilterApi.notEq(col, value);
-        } else if (function instanceof GreaterThan) {
+        } else if (leafFunction instanceof GreaterThan) {
             return FilterApi.gt(col, value);
-        } else if (function instanceof GreaterOrEqual) {
+        } else if (leafFunction instanceof GreaterOrEqual) {
             return FilterApi.gtEq(col, value);
-        } else if (function instanceof LessThan) {
+        } else if (leafFunction instanceof LessThan) {
             return FilterApi.lt(col, value);
-        } else if (function instanceof LessOrEqual) {
+        } else if (leafFunction instanceof LessOrEqual) {
             return FilterApi.ltEq(col, value);
-        } else if (function instanceof IsNull) {
+        } else if (leafFunction instanceof IsNull) {
             return FilterApi.eq(col, value);
-        } else if (function instanceof IsNotNull) {
+        } else if (leafFunction instanceof IsNotNull) {
             return FilterApi.notEq(col, value);
         } else {
-            throw new UnsupportedOperationException("Unsupported predicate operation: " + function);
+            throw new UnsupportedOperationException("Unsupported predicate operation: " + leafFunction);
         }
     }
 
