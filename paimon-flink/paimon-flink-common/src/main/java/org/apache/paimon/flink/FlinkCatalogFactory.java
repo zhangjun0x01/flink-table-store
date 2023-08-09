@@ -26,6 +26,8 @@ import org.apache.paimon.options.Options;
 import java.util.Collections;
 import java.util.Set;
 
+import static org.apache.paimon.CoreOptions.CACHE_CATALOG;
+import static org.apache.paimon.CoreOptions.CACHE_CATALOG_EXPIRATION_MS;
 import static org.apache.paimon.flink.FlinkCatalogOptions.DEFAULT_DATABASE;
 
 /** Factory for {@link FlinkCatalog}. */
@@ -50,21 +52,31 @@ public class FlinkCatalogFactory implements org.apache.flink.table.factories.Cat
 
     @Override
     public FlinkCatalog createCatalog(Context context) {
+        CatalogContext catalogContext =
+                CatalogContext.create(
+                        Options.fromMap(context.getOptions()), new FlinkFileIOLoader());
         return createCatalog(
                 context.getName(),
-                CatalogContext.create(
-                        Options.fromMap(context.getOptions()), new FlinkFileIOLoader()),
-                context.getClassLoader());
+                catalogContext,
+                context.getClassLoader(),
+                catalogContext.options().get(CACHE_CATALOG),
+                catalogContext.options().get(CACHE_CATALOG_EXPIRATION_MS));
     }
 
     public static FlinkCatalog createCatalog(
-            String catalogName, CatalogContext context, ClassLoader classLoader) {
+            String catalogName,
+            CatalogContext context,
+            ClassLoader classLoader,
+            boolean cacheEnabled,
+            long cacheExpirationIntervalMs) {
         return new FlinkCatalog(
                 CatalogFactory.createCatalog(context, classLoader),
                 catalogName,
                 context.options().get(DEFAULT_DATABASE),
                 classLoader,
-                context.options());
+                context.options(),
+                cacheEnabled,
+                cacheExpirationIntervalMs);
     }
 
     public static FlinkCatalog createCatalog(String catalogName, Catalog catalog, Options options) {
@@ -73,7 +85,9 @@ public class FlinkCatalogFactory implements org.apache.flink.table.factories.Cat
                 catalogName,
                 Catalog.DEFAULT_DATABASE,
                 FlinkCatalogFactory.class.getClassLoader(),
-                options);
+                options,
+                options.get(CACHE_CATALOG),
+                options.get(CACHE_CATALOG_EXPIRATION_MS));
     }
 
     public static Catalog createPaimonCatalog(Options catalogOptions) {

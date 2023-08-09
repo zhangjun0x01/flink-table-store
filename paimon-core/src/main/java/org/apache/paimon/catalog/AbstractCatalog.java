@@ -124,7 +124,7 @@ public abstract class AbstractCatalog implements Catalog {
 
     @Override
     public void dropPartition(Identifier identifier, Map<String, String> partitionSpec)
-            throws TableNotExistException {
+            throws TableNotExistException, PartitionNotExistException {
         Table table = getTable(identifier);
         FileStoreTable fileStoreTable = (FileStoreTable) table;
         FileStoreCommit commit = fileStoreTable.store().newCommit(UUID.randomUUID().toString());

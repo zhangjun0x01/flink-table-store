@@ -19,6 +19,7 @@
 package org.apache.paimon.spark;
 
 import org.apache.paimon.CoreOptions;
+import org.apache.paimon.catalog.CacheCatalog;
 import org.apache.paimon.catalog.Catalog;
 import org.apache.paimon.catalog.CatalogContext;
 import org.apache.paimon.catalog.CatalogFactory;
@@ -69,11 +70,22 @@ public class SparkCatalog extends SparkBaseCatalog {
     @Override
     public void initialize(String name, CaseInsensitiveStringMap options) {
         this.name = name;
+
+        Options.fromMap(options);
         CatalogContext catalogContext =
                 CatalogContext.create(
                         Options.fromMap(options),
                         SparkSession.active().sessionState().newHadoopConf());
-        this.catalog = CatalogFactory.createCatalog(catalogContext);
+
+        boolean cacheEnabled = CoreOptions.fromMap(options).cacheCatalog();
+        long cacheExpirationIntervalMs = CoreOptions.fromMap(options).cacheExpirationIntervalMs();
+        this.catalog =
+                cacheEnabled
+                        ? CacheCatalog.wrap(
+                                CatalogFactory.createCatalog(catalogContext),
+                                cacheExpirationIntervalMs)
+                        : CatalogFactory.createCatalog(catalogContext);
+
         if (!catalog.databaseExists(defaultNamespace()[0])) {
             try {
                 createNamespace(defaultNamespace(), new HashMap<>());

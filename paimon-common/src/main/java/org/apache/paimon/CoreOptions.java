@@ -1039,6 +1039,14 @@ public class CoreOptions implements Serializable {
                                     + "The buffer will be flushed when it is full.\n"
                                     + "Mainly to resolve data skew on primary keys. "
                                     + "We recommend starting with 64 mb when trying out this feature.");
+    public static final ConfigOption<Boolean> CACHE_CATALOG =
+            key("cache.catalog").booleanType().defaultValue(true).withDescription("cache");
+
+    public static final ConfigOption<Long> CACHE_CATALOG_EXPIRATION_MS =
+            key("cache.catalog.expiration.ms")
+                    .longType()
+                    .defaultValue(10 * 60 * 1000L)
+                    .withDescription("cache");
 
     public static final ConfigOption<Duration> CROSS_PARTITION_UPSERT_INDEX_TTL =
             key("cross-partition-upsert.index-ttl")
@@ -1381,6 +1389,14 @@ public class CoreOptions implements Serializable {
 
     public StartupMode startupMode() {
         return startupMode(options);
+    }
+
+    public Boolean cacheCatalog() {
+        return options.get(CACHE_CATALOG);
+    }
+
+    public long cacheExpirationIntervalMs() {
+        return options.get(CACHE_CATALOG_EXPIRATION_MS);
     }
 
     public static StartupMode startupMode(Options options) {

@@ -31,6 +31,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.paimon.CoreOptions.CACHE_CATALOG;
+import static org.apache.paimon.CoreOptions.CACHE_CATALOG_EXPIRATION_MS;
 import static org.apache.paimon.flink.FlinkCatalogOptions.DEFAULT_DATABASE;
 
 /** Factory for {@link FlinkGenericCatalog}. */
@@ -73,7 +75,9 @@ public class FlinkGenericCatalogFactory implements CatalogFactory {
                         name,
                         options.get(DEFAULT_DATABASE),
                         cl,
-                        options);
+                        options,
+                        options.get(CACHE_CATALOG),
+                        options.get(CACHE_CATALOG_EXPIRATION_MS));
 
         return new FlinkGenericCatalog(paimon, flinkCatalog);
     }

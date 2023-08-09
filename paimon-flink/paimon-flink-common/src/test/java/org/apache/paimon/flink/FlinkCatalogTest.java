@@ -111,7 +111,9 @@ public class FlinkCatalogTest {
                 FlinkCatalogFactory.createCatalog(
                         "test-catalog",
                         CatalogContext.create(conf),
-                        FlinkCatalogTest.class.getClassLoader());
+                        FlinkCatalogTest.class.getClassLoader(),
+                        false,
+                        0);
     }
 
     private ResolvedSchema createSchema() {
@@ -562,7 +564,9 @@ public class FlinkCatalogTest {
                 FlinkCatalogFactory.createCatalog(
                         "test-ddl-catalog",
                         CatalogContext.create(conf),
-                        FlinkCatalogTest.class.getClassLoader());
+                        FlinkCatalogTest.class.getClassLoader(),
+                        false,
+                        0);
 
         assertThatThrownBy(
                         () ->
@@ -585,7 +589,9 @@ public class FlinkCatalogTest {
                 FlinkCatalogFactory.createCatalog(
                         "test-ddl-catalog1",
                         CatalogContext.create(conf),
-                        FlinkCatalogTest.class.getClassLoader());
+                        FlinkCatalogTest.class.getClassLoader(),
+                        false,
+                        0);
 
         assertThatThrownBy(
                         () ->

@@ -19,6 +19,7 @@
 package org.apache.paimon.flink;
 
 import org.apache.paimon.CoreOptions;
+import org.apache.paimon.catalog.CacheCatalog;
 import org.apache.paimon.catalog.Catalog;
 import org.apache.paimon.catalog.Identifier;
 import org.apache.paimon.data.BinaryRow;
@@ -128,7 +129,6 @@ import static org.apache.paimon.utils.Preconditions.checkArgument;
 /** Catalog for paimon. */
 public class FlinkCatalog extends AbstractCatalog {
     private final ClassLoader classLoader;
-
     private final Catalog catalog;
     private final String name;
     private final boolean logStoreAutoRegister;
@@ -142,10 +142,13 @@ public class FlinkCatalog extends AbstractCatalog {
             String name,
             String defaultDatabase,
             ClassLoader classLoader,
-            Options options) {
+            Options options,
+            boolean cacheEnabled,
+            long cacheExpirationIntervalMs) {
         super(name, defaultDatabase);
-        this.catalog = catalog;
         this.name = name;
+        this.catalog =
+                cacheEnabled ? CacheCatalog.wrap(catalog, cacheExpirationIntervalMs) : catalog;
         this.classLoader = classLoader;
         this.logStoreAutoRegister = options.get(LOG_SYSTEM_AUTO_REGISTER);
         this.logStoreAutoRegisterTimeout = options.get(REGISTER_TIMEOUT);
