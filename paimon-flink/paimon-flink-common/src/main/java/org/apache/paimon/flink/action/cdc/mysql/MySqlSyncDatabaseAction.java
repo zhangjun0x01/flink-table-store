@@ -54,6 +54,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.ververica.cdc.connectors.mysql.source.config.MySqlSourceOptions.SCAN_STARTUP_MODE;
 import static org.apache.paimon.flink.action.cdc.DatabaseSyncMode.COMBINED;
 import static org.apache.paimon.flink.action.cdc.DatabaseSyncMode.DIVIDED;
 import static org.apache.paimon.flink.action.cdc.mysql.MySqlActionUtils.MYSQL_CONVERTER_TINYINT1_BOOL;
@@ -208,6 +209,12 @@ public class MySqlSyncDatabaseAction extends ActionBase {
                             tableConfig,
                             caseSensitive);
             try {
+
+                String startMode = mySqlConfig.get(SCAN_STARTUP_MODE);
+                if (startMode.equals("initial")) {
+                    catalog.dropTable(identifier, true);
+                }
+
                 table = (FileStoreTable) catalog.getTable(identifier);
                 Supplier<String> errMsg =
                         incompatibleMessage(table.schema(), tableInfo, identifier);
