@@ -107,7 +107,8 @@ public class MySqlActionUtils {
     static MySqlSchemasInfo getMySqlTableInfos(
             Configuration mySqlConfig,
             Predicate<String> monitorTablePredication,
-            List<Identifier> excludedTables)
+            List<Identifier> excludedTables,
+            boolean syncDatabase)
             throws Exception {
         Pattern databasePattern =
                 Pattern.compile(mySqlConfig.get(MySqlSourceOptions.DATABASE_NAME));
@@ -129,7 +130,11 @@ public class MySqlActionUtils {
                                                 tableName,
                                                 mySqlConfig.get(MYSQL_CONVERTER_TINYINT1_BOOL));
                                 Identifier identifier = Identifier.create(databaseName, tableName);
-                                if (monitorTablePredication.test(tableName)) {
+                                String finalFullTableName = tableName;
+                                if (syncDatabase) {
+                                    finalFullTableName = identifier.getFullName();
+                                }
+                                if (monitorTablePredication.test(finalFullTableName)) {
                                     mySqlSchemasInfo.addSchema(identifier, mySqlSchema);
                                 } else {
                                     excludedTables.add(identifier);

@@ -178,7 +178,7 @@ public class MySqlSyncDatabaseAction extends ActionBase {
 
         MySqlSchemasInfo mySqlSchemasInfo =
                 MySqlActionUtils.getMySqlTableInfos(
-                        mySqlConfig, this::shouldMonitorTable, excludedTables);
+                        mySqlConfig, this::shouldMonitorTable, excludedTables, true);
 
         logNonPkTables(mySqlSchemasInfo.nonPkTables());
         List<MySqlTableInfo> mySqlTableInfos = mySqlSchemasInfo.toMySqlTableInfos(mergeShards);

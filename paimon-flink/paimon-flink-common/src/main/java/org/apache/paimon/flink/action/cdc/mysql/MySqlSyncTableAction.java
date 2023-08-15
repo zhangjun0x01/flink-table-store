@@ -147,7 +147,7 @@ public class MySqlSyncTableAction extends ActionBase {
 
         MySqlSchemasInfo mySqlSchemasInfo =
                 MySqlActionUtils.getMySqlTableInfos(
-                        mySqlConfig, monitorTablePredication(), new ArrayList<>());
+                        mySqlConfig, monitorTablePredication(), new ArrayList<>(), false);
         validateMySqlTableInfos(mySqlSchemasInfo);
 
         catalog.createDatabase(database, true);
