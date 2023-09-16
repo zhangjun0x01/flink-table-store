@@ -22,6 +22,8 @@ import org.apache.paimon.CoreOptions.MergeEngine;
 import org.apache.paimon.KeyValue;
 import org.apache.paimon.codegen.RecordEqualiser;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.io.DataFileMeta;
 import org.apache.paimon.io.KeyValueFileReaderFactory;
 import org.apache.paimon.io.KeyValueFileWriterFactory;
@@ -56,7 +58,10 @@ public class LookupMergeTreeCompactRewriter<T> extends ChangelogMergeTreeRewrite
             Comparator<InternalRow> keyComparator,
             MergeFunctionFactory<KeyValue> mfFactory,
             MergeSorter mergeSorter,
-            MergeFunctionWrapperFactory<T> wrapperFactory) {
+            MergeFunctionWrapperFactory<T> wrapperFactory,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult,
+            String encryptionColumns) {
         super(
                 maxLevel,
                 mergeEngine,
@@ -64,7 +69,10 @@ public class LookupMergeTreeCompactRewriter<T> extends ChangelogMergeTreeRewrite
                 writerFactory,
                 keyComparator,
                 mfFactory,
-                mergeSorter);
+                mergeSorter,
+                encryptionManager,
+                createKeyResult,
+                encryptionColumns);
         this.lookupLevels = lookupLevels;
         this.wrapperFactory = wrapperFactory;
     }

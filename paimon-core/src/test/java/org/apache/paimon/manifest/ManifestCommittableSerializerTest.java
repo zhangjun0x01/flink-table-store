@@ -19,6 +19,7 @@
 package org.apache.paimon.manifest;
 
 import org.apache.paimon.data.BinaryRow;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.io.CompactIncrement;
 import org.apache.paimon.io.DataFileMeta;
 import org.apache.paimon.io.NewFilesIncrement;
@@ -113,6 +114,7 @@ public class ManifestCommittableSerializerTest {
                 0,
                 1,
                 0,
-                level);
+                level,
+                KeyMetadata.emptyKeyMetadata());
     }
 }

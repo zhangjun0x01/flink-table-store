@@ -19,6 +19,8 @@
 package org.apache.paimon;
 
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.format.FileFormatDiscover;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.manifest.ManifestCacheFilter;
@@ -46,6 +48,7 @@ public class AppendOnlyFileStore extends AbstractFileStore<InternalRow> {
     private final RowType bucketKeyType;
     private final RowType rowType;
     private final String tableName;
+    private final String encryptionColumns;
 
     public AppendOnlyFileStore(
             FileIO fileIO,
@@ -56,11 +59,22 @@ public class AppendOnlyFileStore extends AbstractFileStore<InternalRow> {
             RowType bucketKeyType,
             RowType rowType,
             String tableName,
-            CatalogEnvironment catalogEnvironment) {
-        super(fileIO, schemaManager, schemaId, options, partitionType, catalogEnvironment);
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
+        super(
+                fileIO,
+                schemaManager,
+                schemaId,
+                options,
+                partitionType,
+                catalogEnvironment,
+                encryptionManager,
+                createKeyResult);
         this.bucketKeyType = bucketKeyType;
         this.rowType = rowType;
         this.tableName = tableName;
+        this.encryptionColumns = options.encryptionColumns();
     }
 
     @Override
@@ -85,7 +99,9 @@ public class AppendOnlyFileStore extends AbstractFileStore<InternalRow> {
                 schemaId,
                 rowType,
                 FileFormatDiscover.of(options),
-                pathFactory());
+                pathFactory(),
+                encryptionManager,
+                encryptionColumns);
     }
 
     @Override
@@ -106,7 +122,9 @@ public class AppendOnlyFileStore extends AbstractFileStore<InternalRow> {
                 snapshotManager(),
                 newScan(true, DEFAULT_MAIN_BRANCH).withManifestCacheFilter(manifestFilter),
                 options,
-                tableName);
+                tableName,
+                encryptionManager,
+                createKeyResult);
     }
 
     private AppendOnlyFileStoreScan newScan(boolean forWrite, String branchName) {

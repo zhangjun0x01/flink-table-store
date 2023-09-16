@@ -21,6 +21,7 @@ package org.apache.paimon.io;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.BinaryRowWriter;
 import org.apache.paimon.data.Timestamp;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.stats.StatsTestUtils;
 
 import java.util.Collections;
@@ -50,7 +51,8 @@ public class DataFileTestUtils {
                 0L,
                 DataFileMeta.DUMMY_LEVEL,
                 Collections.emptyList(),
-                Timestamp.fromEpochMillis(100));
+                Timestamp.fromEpochMillis(100),
+                null);
     }
 
     public static DataFileMeta newFile() {
@@ -65,7 +67,8 @@ public class DataFileTestUtils {
                 0,
                 0,
                 0,
-                0);
+                0,
+                KeyMetadata.emptyKeyMetadata());
     }
 
     public static DataFileMeta newFile(
@@ -81,7 +84,8 @@ public class DataFileTestUtils {
                 0,
                 maxSequence,
                 0,
-                level);
+                level,
+                KeyMetadata.emptyKeyMetadata());
     }
 
     public static BinaryRow row(int i) {

@@ -18,7 +18,13 @@
 
 package org.apache.paimon.io;
 
+import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KeyMetadata;
+import org.apache.paimon.encryption.KmsClient;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.FormatWriter;
 import org.apache.paimon.format.FormatWriterFactory;
 import org.apache.paimon.fs.FileIO;
@@ -49,6 +55,7 @@ public abstract class SingleFileWriter<T, R> implements FileWriter<T, R> {
 
     private final FormatWriter writer;
     private PositionOutputStream out;
+    protected KeyMetadata keyMetadata = KeyMetadata.emptyKeyMetadata();
 
     private long recordCount;
     protected boolean closed;
@@ -58,14 +65,33 @@ public abstract class SingleFileWriter<T, R> implements FileWriter<T, R> {
             FormatWriterFactory factory,
             Path path,
             Function<T, InternalRow> converter,
-            String compression) {
+            String compression,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult,
+            CoreOptions options) {
         this.fileIO = fileIO;
         this.path = path;
         this.converter = converter;
 
         try {
             out = fileIO.newOutputStream(path, false);
-            writer = factory.create(out, compression);
+            FileFormatFactory.FormatContextBuilder builder =
+                    FileFormatFactory.formatContextBuilder().compression(compression);
+            if (encryptionManager != null
+                    && !(encryptionManager instanceof PlaintextEncryptionManager)) {
+                keyMetadata = encryptionManager.createLocalDataKey(createKeyResult);
+                builder =
+                        builder.formatOptions(options.toConfiguration())
+                                .withPlaintextDataKey(keyMetadata.plaintextKey())
+                                .withEncryptedKey(keyMetadata.encryptedKey())
+                                .withAADPrefix(keyMetadata.aadPrefix())
+                                .withKeyId(keyMetadata.keyId())
+                                .withEncryptionAlgorithm(options.encryptionAlgorithm())
+                                .withEncryptionColumns(options.encryptionColumns());
+            }
+
+            FileFormatFactory.FormatContext formatContext = builder.build();
+            writer = factory.create(out, formatContext);
         } catch (IOException e) {
             LOG.warn(
                     "Failed to open the bulk writer, closing the output stream and throw the error.",

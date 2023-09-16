@@ -27,6 +27,7 @@ import org.apache.paimon.disk.ChannelWithMeta;
 import org.apache.paimon.disk.ExternalBuffer;
 import org.apache.paimon.disk.IOManager;
 import org.apache.paimon.disk.RowBuffer;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.format.FieldStats;
 import org.apache.paimon.format.FileFormat;
 import org.apache.paimon.fs.Path;
@@ -547,7 +548,10 @@ public class AppendOnlyWriterTest {
                         CoreOptions.FILE_COMPRESSION.defaultValue(),
                         StatsCollectorFactories.createStatsFactories(
                                 options, AppendOnlyWriterTest.SCHEMA.getFieldNames()),
-                        null);
+                        null,
+                        null,
+                        null,
+                        options);
         writer.setMemoryPool(
                 new HeapMemorySegmentPool(options.writeBufferSize(), options.pageSize()));
         return Pair.of(writer, compactManager.allFiles());
@@ -587,6 +591,7 @@ public class AppendOnlyWriterTest {
                         }),
                 minSeq,
                 maxSeq,
-                toCompact.get(0).schemaId());
+                toCompact.get(0).schemaId(),
+                KeyMetadata.emptyKeyMetadata());
     }
 }

@@ -22,6 +22,7 @@ import org.apache.paimon.Snapshot;
 import org.apache.paimon.annotation.VisibleForTesting;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.io.DataFileMeta;
@@ -808,7 +809,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
                     }
                 }
             }
-
+            String encryptedKeyId = getEncryptedKeyId(tableFiles);
             // prepare snapshot file
             newSnapshot =
                     new Snapshot(
@@ -827,7 +828,8 @@ public class FileStoreCommitImpl implements FileStoreCommit {
                             deltaRecordCount,
                             Snapshot.recordCount(changelogFiles),
                             currentWatermark,
-                            statsFileName);
+                            statsFileName,
+                            encryptedKeyId);
         } catch (Throwable e) {
             // fails when preparing for commit, we should clean up
             cleanUpTmpManifests(
@@ -921,6 +923,14 @@ public class FileStoreCommitImpl implements FileStoreCommit {
                 newMetas,
                 changelogMetas);
         return false;
+    }
+
+    private String getEncryptedKeyId(List<ManifestEntry> tableFiles) {
+        if (tableFiles.isEmpty()) {
+            return null;
+        }
+        KeyMetadata keyMetadata = tableFiles.get(0).file().keyMetadata();
+        return keyMetadata == null ? null : keyMetadata.keyId();
     }
 
     @SafeVarargs

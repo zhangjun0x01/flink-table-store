@@ -23,6 +23,9 @@ import org.apache.paimon.CoreOptions.ChangelogProducer;
 import org.apache.paimon.KeyValue;
 import org.apache.paimon.KeyValueFileStore;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.manifest.ManifestCacheFilter;
@@ -62,20 +65,34 @@ class PrimaryKeyFileStoreTable extends AbstractFileStoreTable {
     private transient KeyValueFileStore lazyStore;
 
     PrimaryKeyFileStoreTable(FileIO fileIO, Path path, TableSchema tableSchema) {
-        this(fileIO, path, tableSchema, new CatalogEnvironment(Lock.emptyFactory(), null, null));
+        this(
+                fileIO,
+                path,
+                tableSchema,
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
     }
 
     PrimaryKeyFileStoreTable(
             FileIO fileIO,
             Path path,
             TableSchema tableSchema,
-            CatalogEnvironment catalogEnvironment) {
-        super(fileIO, path, tableSchema, catalogEnvironment);
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
+        super(fileIO, path, tableSchema, catalogEnvironment, encryptionManager, createKeyResult);
     }
 
     @Override
     public FileStoreTable copy(TableSchema newTableSchema) {
-        return new PrimaryKeyFileStoreTable(fileIO, path, newTableSchema, catalogEnvironment);
+        return new PrimaryKeyFileStoreTable(
+                fileIO,
+                path,
+                newTableSchema,
+                catalogEnvironment,
+                encryptionManager,
+                createKeyResult);
     }
 
     @Override
@@ -110,7 +127,9 @@ class PrimaryKeyFileStoreTable extends AbstractFileStoreTable {
                             extractor,
                             mfFactory,
                             name(),
-                            catalogEnvironment);
+                            catalogEnvironment,
+                            encryptionManager,
+                            createKeyResult);
         }
         return lazyStore;
     }
@@ -160,6 +179,12 @@ class PrimaryKeyFileStoreTable extends AbstractFileStoreTable {
             @Override
             public void projection(int[][] projection) {
                 read.withValueProjection(projection);
+            }
+
+            @Override
+            public InnerTableRead withEncryptionManager(EncryptionManager encryptionManager) {
+                read.withEncryptionManager(encryptionManager);
+                return this;
             }
 
             @Override

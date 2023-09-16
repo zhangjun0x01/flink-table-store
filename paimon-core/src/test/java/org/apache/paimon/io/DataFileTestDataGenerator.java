@@ -21,6 +21,7 @@ package org.apache.paimon.io;
 import org.apache.paimon.KeyValue;
 import org.apache.paimon.TestKeyValueGenerator;
 import org.apache.paimon.data.BinaryRow;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.format.TableStatsCollector;
 import org.apache.paimon.statistics.FieldStatsCollector;
 import org.apache.paimon.statistics.FullFieldStatsCollector;
@@ -160,7 +161,8 @@ public class DataFileTestDataGenerator {
                         minSequenceNumber,
                         maxSequenceNumber,
                         0,
-                        level),
+                        level,
+                        KeyMetadata.emptyKeyMetadata()),
                 kvs);
     }
 

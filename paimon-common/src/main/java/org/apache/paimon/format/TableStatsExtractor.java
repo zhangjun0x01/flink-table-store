@@ -27,9 +27,12 @@ import java.io.IOException;
 /** Extracts statistics directly from file. */
 public interface TableStatsExtractor {
 
-    FieldStats[] extract(FileIO fileIO, Path path) throws IOException;
+    FieldStats[] extract(FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
+            throws IOException;
 
-    Pair<FieldStats[], FileInfo> extractWithFileInfo(FileIO fileIO, Path path) throws IOException;
+    Pair<FieldStats[], FileInfo> extractWithFileInfo(
+            FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
+            throws IOException;
 
     /** File info fetched from physical file. */
     class FileInfo {

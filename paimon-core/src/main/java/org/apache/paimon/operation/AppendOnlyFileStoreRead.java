@@ -21,7 +21,9 @@ package org.apache.paimon.operation;
 import org.apache.paimon.AppendOnlyFileStore;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
 import org.apache.paimon.format.FileFormatDiscover;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.FormatKey;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.io.DataFileMeta;
@@ -66,6 +68,8 @@ public class AppendOnlyFileStoreRead implements FileStoreRead<InternalRow> {
     private final FileFormatDiscover formatDiscover;
     private final FileStorePathFactory pathFactory;
     private final Map<FormatKey, BulkFormatMapping> bulkFormatMappings;
+    private final EncryptionManager encryptionManager;
+    private final String encryptionColumns;
 
     private int[][] projection;
 
@@ -77,13 +81,17 @@ public class AppendOnlyFileStoreRead implements FileStoreRead<InternalRow> {
             long schemaId,
             RowType rowType,
             FileFormatDiscover formatDiscover,
-            FileStorePathFactory pathFactory) {
+            FileStorePathFactory pathFactory,
+            EncryptionManager encryptionManager,
+            String encryptionColumns) {
         this.fileIO = fileIO;
         this.schemaManager = schemaManager;
         this.schemaId = schemaId;
         this.formatDiscover = formatDiscover;
         this.pathFactory = pathFactory;
+        this.encryptionManager = encryptionManager;
         this.bulkFormatMappings = new HashMap<>();
+        this.encryptionColumns = encryptionColumns;
 
         this.projection = Projection.range(0, rowType.getFieldCount()).toNestedIndexes();
     }
@@ -168,6 +176,17 @@ public class AppendOnlyFileStoreRead implements FileStoreRead<InternalRow> {
                                                         projectedRowType, dataFilters));
                             });
 
+            FileFormatFactory.FormatContextBuilder builder =
+                    FileFormatFactory.formatContextBuilder();
+            if (file.keyMetadata() != null) {
+                builder =
+                        builder.withPlaintextDataKey(
+                                        encryptionManager.decryptLocalDataKey(file.keyMetadata()))
+                                .withAADPrefix(file.keyMetadata().aadPrefix())
+                                .withEncryptionColumns(encryptionColumns);
+            }
+
+            final FileFormatFactory.FormatContext formatContext = builder.build();
             final BinaryRow partition = split.partition();
             suppliers.add(
                     () ->
@@ -178,7 +197,8 @@ public class AppendOnlyFileStoreRead implements FileStoreRead<InternalRow> {
                                     bulkFormatMapping.getIndexMapping(),
                                     bulkFormatMapping.getCastMapping(),
                                     PartitionUtils.create(
-                                            bulkFormatMapping.getPartitionPair(), partition)));
+                                            bulkFormatMapping.getPartitionPair(), partition),
+                                    formatContext));
         }
 
         return ConcatRecordReader.create(suppliers);

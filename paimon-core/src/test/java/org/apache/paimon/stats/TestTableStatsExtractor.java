@@ -21,6 +21,7 @@ package org.apache.paimon.stats;
 import org.apache.paimon.data.InternalRow;
 import org.apache.paimon.format.FieldStats;
 import org.apache.paimon.format.FileFormat;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.FormatReaderFactory;
 import org.apache.paimon.format.TableStatsCollector;
 import org.apache.paimon.format.TableStatsExtractor;
@@ -56,13 +57,15 @@ public class TestTableStatsExtractor implements TableStatsExtractor {
                 "The stats collector is not aligned to write schema.");
     }
 
-    @Override
-    public FieldStats[] extract(FileIO fileIO, Path path) throws IOException {
-        return extractWithFileInfo(fileIO, path).getLeft();
+    public FieldStats[] extract(
+            FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
+            throws IOException {
+        return extractWithFileInfo(fileIO, path, formatContext).getLeft();
     }
 
     @Override
-    public Pair<FieldStats[], FileInfo> extractWithFileInfo(FileIO fileIO, Path path)
+    public Pair<FieldStats[], FileInfo> extractWithFileInfo(
+            FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
             throws IOException {
         IdentityObjectSerializer serializer = new IdentityObjectSerializer(rowType);
         FormatReaderFactory readerFactory = format.createReaderFactory(rowType);

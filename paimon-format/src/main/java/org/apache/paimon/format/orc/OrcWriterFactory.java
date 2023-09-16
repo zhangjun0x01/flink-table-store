@@ -21,6 +21,7 @@ package org.apache.paimon.format.orc;
 import org.apache.paimon.CoreOptions;
 import org.apache.paimon.annotation.VisibleForTesting;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.FormatWriter;
 import org.apache.paimon.format.FormatWriterFactory;
 import org.apache.paimon.format.orc.writer.OrcBulkWriter;
@@ -32,15 +33,16 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.orc.OrcConf;
 import org.apache.orc.OrcFile;
-import org.apache.orc.impl.PhysicalFsWriter;
+import org.apache.orc.TypeDescription;
 import org.apache.orc.impl.WriterImpl;
-import org.apache.orc.impl.writer.WriterEncryptionVariant;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.apache.paimon.utils.Preconditions.checkNotNull;
 
@@ -102,22 +104,24 @@ public class OrcWriterFactory implements FormatWriterFactory {
     }
 
     @Override
-    public FormatWriter create(PositionOutputStream out, String compression) throws IOException {
-        if (null != compression) {
-            writerProperties.setProperty(OrcConf.COMPRESS.getAttribute(), compression);
+    public FormatWriter create(
+            PositionOutputStream out, FileFormatFactory.FormatContext formatContext)
+            throws IOException {
+        if (formatContext != null && formatContext.compression() != null) {
+            writerProperties.setProperty(
+                    OrcConf.COMPRESS.getAttribute(), formatContext.compression());
         }
 
-        OrcFile.WriterOptions opts = getWriterOptions();
-        opts.physicalWriter(
-                new PhysicalFsWriter(
-                        new FSDataOutputStream(out, null) {
-                            @Override
-                            public void close() throws IOException {
-                                // do nothing
-                            }
-                        },
-                        opts,
-                        new WriterEncryptionVariant[0]));
+        OrcFile.WriterOptions opts = getWriterOptions(formatContext);
+
+        // use fsDataOutputStream to build PhysicalFsWriter.
+        FSDataOutputStream fsDataOutputStream =
+                new FSDataOutputStream(out, null) {
+                    @Override
+                    public void close() throws IOException {
+                        // do nothing
+                    }
+                };
 
         // The path of the Writer is not used to indicate the destination file
         // in this case since we have used a dedicated physical writer to write
@@ -126,21 +130,40 @@ public class OrcWriterFactory implements FormatWriterFactory {
         Path unusedPath = new Path(UUID.randomUUID().toString());
         return new OrcBulkWriter(
                 vectorizer,
-                new WriterImpl(null, unusedPath, opts),
+                new WriterImpl(null, unusedPath, opts, formatContext, fsDataOutputStream),
                 out,
                 coreOptions.orcWriteBatch());
     }
 
     @VisibleForTesting
-    protected OrcFile.WriterOptions getWriterOptions() {
+    protected OrcFile.WriterOptions getWriterOptions(
+            FileFormatFactory.FormatContext formatContext) {
+        Configuration conf = new ThreadLocalClassLoaderConfiguration();
         if (null == writerOptions) {
-            Configuration conf = new ThreadLocalClassLoaderConfiguration();
             for (Map.Entry<String, String> entry : confMap.entrySet()) {
                 conf.set(entry.getKey(), entry.getValue());
             }
 
             writerOptions = OrcFile.writerOptions(writerProperties, conf);
             writerOptions.setSchema(this.vectorizer.getSchema());
+        }
+
+        //  enable the encryption.
+        if (formatContext != null && formatContext.keyId() != null) {
+            String encryptionColumns = formatContext.encryptionColumns();
+            String encryption;
+            if (encryptionColumns == null) {
+                List<TypeDescription> typeDescriptions = vectorizer.getSchema().getChildren();
+                String allColumns =
+                        typeDescriptions.stream()
+                                .map(TypeDescription::getFullFieldName)
+                                .collect(Collectors.joining(","));
+                encryption = formatContext.keyId() + ":" + allColumns;
+            } else {
+                encryption = formatContext.keyId() + ":" + encryptionColumns;
+            }
+
+            writerOptions.encrypt(encryption);
         }
 
         return writerOptions;

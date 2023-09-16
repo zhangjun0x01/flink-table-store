@@ -20,6 +20,7 @@ package org.apache.paimon.flink.sink;
 
 import org.apache.paimon.append.AppendOnlyCompactionTask;
 import org.apache.paimon.data.BinaryRow;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.io.DataFileMeta;
 import org.apache.paimon.table.sink.CompactionTaskSerializer;
 
@@ -74,6 +75,7 @@ public class CompactionTaskSimpleSerializerTest {
                 0,
                 1,
                 0,
-                0);
+                0,
+                KeyMetadata.emptyKeyMetadata());
     }
 }

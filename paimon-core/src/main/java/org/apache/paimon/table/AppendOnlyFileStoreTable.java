@@ -21,6 +21,9 @@ package org.apache.paimon.table;
 import org.apache.paimon.AppendOnlyFileStore;
 import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.manifest.ManifestCacheFilter;
@@ -54,20 +57,34 @@ class AppendOnlyFileStoreTable extends AbstractFileStoreTable {
     private transient AppendOnlyFileStore lazyStore;
 
     AppendOnlyFileStoreTable(FileIO fileIO, Path path, TableSchema tableSchema) {
-        this(fileIO, path, tableSchema, new CatalogEnvironment(Lock.emptyFactory(), null, null));
+        this(
+                fileIO,
+                path,
+                tableSchema,
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
     }
 
     AppendOnlyFileStoreTable(
             FileIO fileIO,
             Path path,
             TableSchema tableSchema,
-            CatalogEnvironment catalogEnvironment) {
-        super(fileIO, path, tableSchema, catalogEnvironment);
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
+        super(fileIO, path, tableSchema, catalogEnvironment, encryptionManager, createKeyResult);
     }
 
     @Override
     public FileStoreTable copy(TableSchema newTableSchema) {
-        return new AppendOnlyFileStoreTable(fileIO, path, newTableSchema, catalogEnvironment);
+        return new AppendOnlyFileStoreTable(
+                fileIO,
+                path,
+                newTableSchema,
+                catalogEnvironment,
+                encryptionManager,
+                createKeyResult);
     }
 
     @Override
@@ -83,7 +100,9 @@ class AppendOnlyFileStoreTable extends AbstractFileStoreTable {
                             tableSchema.logicalBucketKeyType(),
                             tableSchema.logicalRowType(),
                             name(),
-                            catalogEnvironment);
+                            catalogEnvironment,
+                            encryptionManager,
+                            createKeyResult);
         }
         return lazyStore;
     }

@@ -24,6 +24,7 @@ import org.apache.paimon.codegen.RecordEqualiser;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.GenericRow;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.format.FileFormat;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.fs.local.LocalFileIO;
@@ -129,7 +130,8 @@ public class TestChangelogDataReadWrite {
                         ignore -> avro,
                         pathFactory,
                         EXTRACTOR,
-                        new CoreOptions(new HashMap<>()));
+                        new CoreOptions(new HashMap<>()),
+                        new PlaintextEncryptionManager());
         return new KeyValueTableRead(read, null) {
 
             @Override
@@ -185,7 +187,9 @@ public class TestChangelogDataReadWrite {
                                 null,
                                 options,
                                 EXTRACTOR,
-                                tablePath.getName())
+                                tablePath.getName(),
+                                new PlaintextEncryptionManager(),
+                                null)
                         .createWriterContainer(partition, bucket, true)
                         .writer;
         ((MemoryOwner) writer)

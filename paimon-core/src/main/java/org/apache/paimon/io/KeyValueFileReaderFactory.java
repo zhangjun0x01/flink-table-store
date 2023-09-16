@@ -22,6 +22,7 @@ import org.apache.paimon.CoreOptions;
 import org.apache.paimon.KeyValue;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.format.FileFormatDiscover;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.FormatKey;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.partition.PartitionUtils;
@@ -83,12 +84,17 @@ public class KeyValueFileReaderFactory {
     }
 
     public RecordReader<KeyValue> createRecordReader(
-            long schemaId, String fileName, long fileSize, int level) throws IOException {
+            long schemaId,
+            String fileName,
+            long fileSize,
+            int level,
+            FileFormatFactory.FormatContext formatContext)
+            throws IOException {
         if (fileSize >= asyncThreshold && fileName.endsWith("orc")) {
             return new AsyncRecordReader<>(
-                    () -> createRecordReader(schemaId, fileName, level, false, 2));
+                    () -> createRecordReader(schemaId, fileName, level, false, 2, formatContext));
         }
-        return createRecordReader(schemaId, fileName, level, true, null);
+        return createRecordReader(schemaId, fileName, level, true, null, formatContext);
     }
 
     private RecordReader<KeyValue> createRecordReader(
@@ -96,7 +102,8 @@ public class KeyValueFileReaderFactory {
             String fileName,
             int level,
             boolean reuseFormat,
-            @Nullable Integer poolSize)
+            @Nullable Integer poolSize,
+            FileFormatFactory.FormatContext formatContext)
             throws IOException {
         String formatIdentifier = DataFilePathFactory.formatIdentifier(fileName);
 
@@ -123,7 +130,8 @@ public class KeyValueFileReaderFactory {
                 poolSize,
                 bulkFormatMapping.getIndexMapping(),
                 bulkFormatMapping.getCastMapping(),
-                PartitionUtils.create(bulkFormatMapping.getPartitionPair(), partition));
+                PartitionUtils.create(bulkFormatMapping.getPartitionPair(), partition),
+                formatContext);
     }
 
     public static Builder builder(

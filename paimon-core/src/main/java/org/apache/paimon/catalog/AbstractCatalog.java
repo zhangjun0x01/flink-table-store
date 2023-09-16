@@ -19,7 +19,11 @@
 package org.apache.paimon.catalog;
 
 import org.apache.paimon.CoreOptions;
+import org.apache.paimon.Snapshot;
 import org.apache.paimon.annotation.VisibleForTesting;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.factories.FactoryUtil;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
@@ -36,6 +40,7 @@ import org.apache.paimon.table.FileStoreTableFactory;
 import org.apache.paimon.table.Table;
 import org.apache.paimon.table.sink.BatchWriteBuilder;
 import org.apache.paimon.table.system.SystemTableLoader;
+import org.apache.paimon.utils.SnapshotManager;
 import org.apache.paimon.utils.StringUtils;
 
 import javax.annotation.Nullable;
@@ -46,6 +51,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -65,6 +71,8 @@ public abstract class AbstractCatalog implements Catalog {
     protected final Options catalogOptions;
 
     @Nullable protected final LineageMetaFactory lineageMetaFactory;
+
+    private final Map<Identifier, EncryptionManager> encryptionManagerMap = new HashMap<>();
 
     protected AbstractCatalog(FileIO fileIO) {
         this.fileIO = fileIO;
@@ -299,15 +307,48 @@ public abstract class AbstractCatalog implements Catalog {
 
     private FileStoreTable getDataTable(Identifier identifier) throws TableNotExistException {
         TableSchema tableSchema = getDataTableSchema(identifier);
+        Path tablePath = getDataTableLocation(identifier);
+
+        KmsClient.CreateKeyResult createKeyResult = null;
+
+        Map<String, String> allOptions = new HashMap<>(tableSchema.options());
+        allOptions.putAll(catalogOptions.toMap());
+
+        CoreOptions options = new CoreOptions(allOptions);
+        EncryptionManager encryptionManager =
+                encryptionManagerMap.computeIfAbsent(
+                        identifier,
+                        key -> {
+                            EncryptionManager manager = encryptionManager(options);
+                            manager.configure(options);
+                            return manager;
+                        });
+
+        CoreOptions.EncryptionMechanism encryptionMechanism = options.encryptionMechanism();
+        if (!encryptionMechanism.equals(CoreOptions.EncryptionMechanism.PLAINTEXT)) {
+            SnapshotManager snapshotManager = new SnapshotManager(fileIO, tablePath);
+            Snapshot snapshot = snapshotManager.latestSnapshot();
+            String encryptionKeyId;
+            if (snapshot != null) {
+                encryptionKeyId = snapshot.encryptionKeyId();
+                byte[] key = encryptionManager.kmsClient().getKey(encryptionKeyId);
+                createKeyResult = new KmsClient.CreateKeyResult(encryptionKeyId, key);
+            } else {
+                createKeyResult = encryptionManager.kmsClient().createKey();
+            }
+        }
+
         return FileStoreTableFactory.create(
                 fileIO,
-                getDataTableLocation(identifier),
+                tablePath,
                 tableSchema,
                 new CatalogEnvironment(
                         Lock.factory(
                                 lockFactory().orElse(null), lockContext().orElse(null), identifier),
                         metastoreClientFactory(identifier).orElse(null),
-                        lineageMetaFactory));
+                        lineageMetaFactory),
+                encryptionManager,
+                createKeyResult);
     }
 
     /**
@@ -464,5 +505,16 @@ public abstract class AbstractCatalog implements Catalog {
                 String.format(
                         "The value of %s property should be %s.",
                         CoreOptions.AUTO_CREATE.key(), Boolean.FALSE));
+    }
+
+    private static EncryptionManager encryptionManager(CoreOptions options) {
+        for (EncryptionManager encryptionManager :
+                ServiceLoader.load(
+                        EncryptionManager.class, AbstractCatalog.class.getClassLoader())) {
+            if (encryptionManager.identifier().equals(options.encryptionMechanism().toString())) {
+                return encryptionManager;
+            }
+        }
+        return new PlaintextEncryptionManager();
     }
 }

@@ -26,6 +26,7 @@ import org.apache.paimon.compact.CompactResult;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.GenericRow;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.format.FileFormat;
 import org.apache.paimon.format.FlushingFileFormat;
 import org.apache.paimon.fs.FileStatus;
@@ -427,6 +428,8 @@ public abstract class MergeTreeTestBase {
                         ChangelogProducer.NONE,
                         null,
                         null,
+                        null,
+                        new PlaintextEncryptionManager(),
                         null);
         writer.setMemoryPool(
                 new HeapMemorySegmentPool(options.writeBufferSize(), options.pageSize()));
@@ -556,7 +559,9 @@ public abstract class MergeTreeTestBase {
                         readerFactory,
                         comparator,
                         DeduplicateMergeFunction.factory().create(),
-                        new MergeSorter(options, null, null, null));
+                        new MergeSorter(options, null, null, null),
+                        new PlaintextEncryptionManager(),
+                        null);
         List<TestRecord> records = new ArrayList<>();
         try (RecordReaderIterator<KeyValue> iterator = new RecordReaderIterator<>(reader)) {
             while (iterator.hasNext()) {
@@ -594,7 +599,7 @@ public abstract class MergeTreeTestBase {
                 int outputLevel, boolean dropDelete, List<List<SortedRun>> sections)
                 throws Exception {
             RollingFileWriter<KeyValue, DataFileMeta> writer =
-                    writerFactory.createRollingMergeTreeFileWriter(outputLevel);
+                    writerFactory.createRollingMergeTreeFileWriter(outputLevel, null, null);
             RecordReader<KeyValue> sectionsReader =
                     MergeTreeReaders.readerForMergeTree(
                             sections,
@@ -602,7 +607,9 @@ public abstract class MergeTreeTestBase {
                             compactReaderFactory,
                             comparator,
                             DeduplicateMergeFunction.factory().create(),
-                            new MergeSorter(options, null, null, null));
+                            new MergeSorter(options, null, null, null),
+                            new PlaintextEncryptionManager(),
+                            null);
             writer.write(new RecordReaderIterator<>(sectionsReader));
             writer.close();
             return new CompactResult(extractFilesFromSections(sections), writer.result());

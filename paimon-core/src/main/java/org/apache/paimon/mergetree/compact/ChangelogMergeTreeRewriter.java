@@ -22,6 +22,9 @@ import org.apache.paimon.CoreOptions.MergeEngine;
 import org.apache.paimon.KeyValue;
 import org.apache.paimon.compact.CompactResult;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.io.DataFileMeta;
 import org.apache.paimon.io.KeyValueFileReaderFactory;
 import org.apache.paimon.io.KeyValueFileWriterFactory;
@@ -52,8 +55,19 @@ public abstract class ChangelogMergeTreeRewriter extends MergeTreeCompactRewrite
             KeyValueFileWriterFactory writerFactory,
             Comparator<InternalRow> keyComparator,
             MergeFunctionFactory<KeyValue> mfFactory,
-            MergeSorter mergeSorter) {
-        super(readerFactory, writerFactory, keyComparator, mfFactory, mergeSorter);
+            MergeSorter mergeSorter,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult,
+            String encryptionColumns) {
+        super(
+                readerFactory,
+                writerFactory,
+                keyComparator,
+                mfFactory,
+                mergeSorter,
+                encryptionManager,
+                createKeyResult,
+                encryptionColumns);
         this.maxLevel = maxLevel;
         this.mergeEngine = mergeEngine;
     }
@@ -86,9 +100,21 @@ public abstract class ChangelogMergeTreeRewriter extends MergeTreeCompactRewrite
     public CompactResult rewrite(
             int outputLevel, boolean dropDelete, List<List<SortedRun>> sections) throws Exception {
         if (rewriteChangelog(outputLevel, dropDelete, sections)) {
-            return rewriteChangelogCompaction(outputLevel, sections, dropDelete, true);
+            return rewriteChangelogCompaction(
+                    outputLevel,
+                    sections,
+                    dropDelete,
+                    true,
+                    new PlaintextEncryptionManager(),
+                    null);
         } else {
-            return rewriteCompaction(outputLevel, dropDelete, sections);
+            return rewriteCompaction(
+                    outputLevel,
+                    dropDelete,
+                    sections,
+                    new PlaintextEncryptionManager(),
+                    null,
+                    null);
         }
     }
 
@@ -102,7 +128,9 @@ public abstract class ChangelogMergeTreeRewriter extends MergeTreeCompactRewrite
             int outputLevel,
             List<List<SortedRun>> sections,
             boolean dropDelete,
-            boolean rewriteCompactFile)
+            boolean rewriteCompactFile,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult)
             throws Exception {
         List<ConcatRecordReader.ReaderSupplier<ChangelogResult>> sectionReaders = new ArrayList<>();
         for (List<SortedRun> section : sections) {
@@ -113,7 +141,9 @@ public abstract class ChangelogMergeTreeRewriter extends MergeTreeCompactRewrite
                                     readerFactory,
                                     keyComparator,
                                     createMergeWrapper(outputLevel),
-                                    mergeSorter));
+                                    mergeSorter,
+                                    encryptionManager,
+                                    encryptionColumns));
         }
 
         RecordReaderIterator<ChangelogResult> iterator = null;
@@ -123,9 +153,13 @@ public abstract class ChangelogMergeTreeRewriter extends MergeTreeCompactRewrite
         try {
             iterator = new RecordReaderIterator<>(ConcatRecordReader.create(sectionReaders));
             if (rewriteCompactFile) {
-                compactFileWriter = writerFactory.createRollingMergeTreeFileWriter(outputLevel);
+                compactFileWriter =
+                        writerFactory.createRollingMergeTreeFileWriter(
+                                outputLevel, encryptionManager, createKeyResult);
             }
-            changelogFileWriter = writerFactory.createRollingChangelogFileWriter(outputLevel);
+            changelogFileWriter =
+                    writerFactory.createRollingChangelogFileWriter(
+                            outputLevel, encryptionManager, createKeyResult);
 
             while (iterator.hasNext()) {
                 ChangelogResult result = iterator.next();
@@ -169,7 +203,9 @@ public abstract class ChangelogMergeTreeRewriter extends MergeTreeCompactRewrite
                     Collections.singletonList(
                             Collections.singletonList(SortedRun.fromSingle(file))),
                     false,
-                    strategy.rewrite);
+                    strategy.rewrite,
+                    new PlaintextEncryptionManager(),
+                    null);
         } else {
             return super.upgrade(outputLevel, file);
         }

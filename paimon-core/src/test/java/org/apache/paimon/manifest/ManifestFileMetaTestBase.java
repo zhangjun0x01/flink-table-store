@@ -22,6 +22,7 @@ import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.BinaryRowWriter;
 import org.apache.paimon.data.Timestamp;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.format.FileFormat;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.FileIOFinder;
@@ -81,7 +82,8 @@ public abstract class ManifestFileMetaTestBase {
                         0, // not used
                         0, // not used
                         Collections.emptyList(),
-                        Timestamp.fromEpochMillis(200000)));
+                        Timestamp.fromEpochMillis(200000),
+                        null));
     }
 
     protected ManifestFileMeta makeManifest(ManifestEntry... entries) {
@@ -135,6 +137,9 @@ public abstract class ManifestFileMetaTestBase {
                                 "default",
                                 CoreOptions.FILE_FORMAT.defaultValue().toString()),
                         Long.MAX_VALUE,
+                        null,
+                        null,
+                        null,
                         null)
                 .create();
     }
@@ -241,7 +246,7 @@ public abstract class ManifestFileMetaTestBase {
                         0, // not used
                         0, // not used
                         0, // not used
-                        0 // not used
-                        ));
+                        0, // not used
+                        KeyMetadata.emptyKeyMetadata()));
     }
 }

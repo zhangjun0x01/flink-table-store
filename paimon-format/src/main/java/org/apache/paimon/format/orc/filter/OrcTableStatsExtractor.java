@@ -22,6 +22,7 @@ import org.apache.paimon.data.BinaryString;
 import org.apache.paimon.data.Decimal;
 import org.apache.paimon.data.Timestamp;
 import org.apache.paimon.format.FieldStats;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.TableStatsExtractor;
 import org.apache.paimon.format.orc.OrcReaderFactory;
 import org.apache.paimon.fs.FileIO;
@@ -66,14 +67,18 @@ public class OrcTableStatsExtractor implements TableStatsExtractor {
     }
 
     @Override
-    public FieldStats[] extract(FileIO fileIO, Path path) throws IOException {
-        return extractWithFileInfo(fileIO, path).getLeft();
+    public FieldStats[] extract(
+            FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
+            throws IOException {
+        return extractWithFileInfo(fileIO, path, formatContext).getLeft();
     }
 
     @Override
-    public Pair<FieldStats[], FileInfo> extractWithFileInfo(FileIO fileIO, Path path)
+    public Pair<FieldStats[], FileInfo> extractWithFileInfo(
+            FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
             throws IOException {
-        try (Reader reader = OrcReaderFactory.createReader(new Configuration(), fileIO, path)) {
+        try (Reader reader =
+                OrcReaderFactory.createReader(new Configuration(), fileIO, path, formatContext)) {
             long rowCount = reader.getNumberOfRows();
             ColumnStatistics[] columnStatistics = reader.getStatistics();
             TypeDescription schema = reader.getSchema();

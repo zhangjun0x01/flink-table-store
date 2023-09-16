@@ -19,6 +19,8 @@
 package org.apache.paimon.operation;
 
 import org.apache.paimon.CoreOptions;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.index.IndexMaintainer;
 import org.apache.paimon.io.cache.CacheManager;
 import org.apache.paimon.memory.HeapMemorySegmentPool;
@@ -49,8 +51,10 @@ import java.util.Map;
 public abstract class MemoryFileStoreWrite<T> extends AbstractFileStoreWrite<T> {
     private static final Logger LOG = LoggerFactory.getLogger(MemoryFileStoreWrite.class);
 
-    private final CoreOptions options;
+    protected final CoreOptions options;
     protected final CacheManager cacheManager;
+    protected final EncryptionManager encryptionManager;
+    protected final KmsClient.CreateKeyResult createKeyResult;
     private MemoryPoolFactory writeBufferPool;
 
     private WriterBufferMetric writerBufferMetric;
@@ -62,7 +66,9 @@ public abstract class MemoryFileStoreWrite<T> extends AbstractFileStoreWrite<T> 
             CoreOptions options,
             @Nullable IndexMaintainer.Factory<T> indexFactory,
             String tableName,
-            FileStorePathFactory pathFactory) {
+            FileStorePathFactory pathFactory,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
         super(
                 commitUser,
                 snapshotManager,
@@ -73,6 +79,8 @@ public abstract class MemoryFileStoreWrite<T> extends AbstractFileStoreWrite<T> 
                 options.writeMaxWritersToSpill());
         this.options = options;
         this.cacheManager = new CacheManager(options.lookupCacheMaxMemory());
+        this.encryptionManager = encryptionManager;
+        this.createKeyResult = createKeyResult;
     }
 
     @Override

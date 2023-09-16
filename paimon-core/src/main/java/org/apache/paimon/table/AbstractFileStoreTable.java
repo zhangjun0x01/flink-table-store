@@ -21,6 +21,8 @@ package org.apache.paimon.table;
 import org.apache.paimon.CoreOptions;
 import org.apache.paimon.Snapshot;
 import org.apache.paimon.consumer.ConsumerManager;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.metastore.AddPartitionCommitCallback;
@@ -81,12 +83,16 @@ abstract class AbstractFileStoreTable implements FileStoreTable {
     protected final Path path;
     protected final TableSchema tableSchema;
     protected final CatalogEnvironment catalogEnvironment;
+    protected final EncryptionManager encryptionManager;
+    protected final KmsClient.CreateKeyResult createKeyResult;
 
     protected AbstractFileStoreTable(
             FileIO fileIO,
             Path path,
             TableSchema tableSchema,
-            CatalogEnvironment catalogEnvironment) {
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
         this.fileIO = fileIO;
         this.path = path;
         if (!tableSchema.options().containsKey(PATH.key())) {
@@ -97,6 +103,8 @@ abstract class AbstractFileStoreTable implements FileStoreTable {
         }
         this.tableSchema = tableSchema;
         this.catalogEnvironment = catalogEnvironment;
+        this.encryptionManager = encryptionManager;
+        this.createKeyResult = createKeyResult;
     }
 
     @Override

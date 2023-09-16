@@ -20,6 +20,7 @@ package org.apache.paimon.table.source.snapshot;
 
 import org.apache.paimon.Snapshot;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.io.DataFileMetaSerializer;
 import org.apache.paimon.operation.Lock;
 import org.apache.paimon.options.Options;
@@ -149,6 +150,8 @@ public class ContinuousAppendAndCompactFollowUpScannerTest extends ScannerTestBa
                 tablePath,
                 tableSchema,
                 conf,
-                new CatalogEnvironment(Lock.emptyFactory(), null, null));
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
     }
 }

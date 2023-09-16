@@ -23,6 +23,7 @@ import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.BinaryRowWriter;
 import org.apache.paimon.data.GenericRow;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.FileIOFinder;
 import org.apache.paimon.fs.Path;
@@ -169,7 +170,9 @@ public abstract class ScannerTestBase {
                 tablePath,
                 tableSchema,
                 conf,
-                new CatalogEnvironment(Lock.emptyFactory(), null, null));
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
     }
 
     protected List<Split> toSplits(List<DataSplit> dataSplits) {

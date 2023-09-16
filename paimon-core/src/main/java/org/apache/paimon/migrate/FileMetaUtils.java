@@ -21,6 +21,7 @@ package org.apache.paimon.migrate;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.BinaryRowWriter;
 import org.apache.paimon.data.BinaryWriter;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.format.FieldStats;
 import org.apache.paimon.format.FileFormat;
 import org.apache.paimon.format.TableStatsExtractor;
@@ -155,7 +156,7 @@ public class FileMetaUtils {
                 new FieldStatsArraySerializer(table.rowType());
 
         Pair<FieldStats[], TableStatsExtractor.FileInfo> fileInfo =
-                tableStatsExtractor.extractWithFileInfo(fileIO, path);
+                tableStatsExtractor.extractWithFileInfo(fileIO, path, null);
         BinaryTableStats stats = statsArraySerializer.toBinary(fileInfo.getLeft());
 
         return DataFileMeta.forAppend(
@@ -165,7 +166,8 @@ public class FileMetaUtils {
                 stats,
                 0,
                 0,
-                ((FileStoreTable) table).schema().id());
+                ((FileStoreTable) table).schema().id(),
+                KeyMetadata.emptyKeyMetadata());
     }
 
     public static BinaryRow writePartitionValue(

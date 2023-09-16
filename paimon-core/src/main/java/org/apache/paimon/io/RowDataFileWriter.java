@@ -18,7 +18,10 @@
 
 package org.apache.paimon.io;
 
+import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.format.FormatWriterFactory;
 import org.apache.paimon.format.TableStatsExtractor;
 import org.apache.paimon.fs.FileIO;
@@ -53,7 +56,10 @@ public class RowDataFileWriter extends StatsCollectingSingleFileWriter<InternalR
             long schemaId,
             LongCounter seqNumCounter,
             String fileCompression,
-            FieldStatsCollector.Factory[] statsCollectors) {
+            FieldStatsCollector.Factory[] statsCollectors,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult,
+            CoreOptions options) {
         super(
                 fileIO,
                 factory,
@@ -62,7 +68,10 @@ public class RowDataFileWriter extends StatsCollectingSingleFileWriter<InternalR
                 writeSchema,
                 tableStatsExtractor,
                 fileCompression,
-                statsCollectors);
+                statsCollectors,
+                options,
+                encryptionManager,
+                createKeyResult);
         this.schemaId = schemaId;
         this.seqNumCounter = seqNumCounter;
         this.statsArraySerializer = new FieldStatsArraySerializer(writeSchema);
@@ -84,6 +93,7 @@ public class RowDataFileWriter extends StatsCollectingSingleFileWriter<InternalR
                 stats,
                 seqNumCounter.getValue() - super.recordCount(),
                 seqNumCounter.getValue() - 1,
-                schemaId);
+                schemaId,
+                keyMetadata);
     }
 }

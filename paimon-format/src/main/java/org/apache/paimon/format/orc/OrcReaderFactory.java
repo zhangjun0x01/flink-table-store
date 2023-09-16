@@ -23,6 +23,7 @@ import org.apache.paimon.data.columnar.ColumnVector;
 import org.apache.paimon.data.columnar.ColumnarRow;
 import org.apache.paimon.data.columnar.ColumnarRowIterator;
 import org.apache.paimon.data.columnar.VectorizedColumnBatch;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.FormatReaderFactory;
 import org.apache.paimon.format.fs.HadoopReadOnlyFileSystem;
 import org.apache.paimon.format.orc.filter.OrcFilters;
@@ -35,6 +36,7 @@ import org.apache.paimon.utils.IOUtils;
 import org.apache.paimon.utils.Pair;
 import org.apache.paimon.utils.Pool;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.io.sarg.SearchArgument;
 import org.apache.hadoop.hive.ql.io.sarg.SearchArgumentFactory;
@@ -43,6 +45,7 @@ import org.apache.orc.OrcFile;
 import org.apache.orc.RecordReader;
 import org.apache.orc.StripeInformation;
 import org.apache.orc.TypeDescription;
+import org.apache.orc.impl.ReaderImpl;
 
 import javax.annotation.Nullable;
 
@@ -88,12 +91,15 @@ public class OrcReaderFactory implements FormatReaderFactory {
     // ------------------------------------------------------------------------
 
     @Override
-    public OrcVectorizedReader createReader(FileIO fileIO, Path file) throws IOException {
-        return createReader(fileIO, file, 1);
+    public OrcVectorizedReader createReader(
+            FileIO fileIO, Path file, FileFormatFactory.FormatContext formatContext)
+            throws IOException {
+        return createReader(fileIO, file, 1, formatContext);
     }
 
     @Override
-    public OrcVectorizedReader createReader(FileIO fileIO, Path file, int poolSize)
+    public OrcVectorizedReader createReader(
+            FileIO fileIO, Path file, int poolSize, FileFormatFactory.FormatContext formatContext)
             throws IOException {
         Pool<OrcReaderBatch> poolOfBatches = createPoolOfBatches(poolSize);
         RecordReader orcReader =
@@ -104,7 +110,8 @@ public class OrcReaderFactory implements FormatReaderFactory {
                         fileIO,
                         file,
                         0,
-                        fileIO.getFileSize(file));
+                        fileIO.getFileSize(file),
+                        formatContext);
         return new OrcVectorizedReader(orcReader, poolOfBatches);
     }
 
@@ -245,15 +252,16 @@ public class OrcReaderFactory implements FormatReaderFactory {
     }
 
     private static RecordReader createRecordReader(
-            org.apache.hadoop.conf.Configuration conf,
+            Configuration conf,
             TypeDescription schema,
             List<OrcFilters.Predicate> conjunctPredicates,
             FileIO fileIO,
-            org.apache.paimon.fs.Path path,
+            Path path,
             long splitStart,
-            long splitLength)
+            long splitLength,
+            FileFormatFactory.FormatContext formatContext)
             throws IOException {
-        org.apache.orc.Reader orcReader = createReader(conf, fileIO, path);
+        org.apache.orc.Reader orcReader = createReader(conf, fileIO, path, formatContext);
         try {
             // get offset and length for the stripes that start in the split
             Pair<Long, Long> offsetAndLength =
@@ -346,9 +354,10 @@ public class OrcReaderFactory implements FormatReaderFactory {
     }
 
     public static org.apache.orc.Reader createReader(
-            org.apache.hadoop.conf.Configuration conf,
+            Configuration conf,
             FileIO fileIO,
-            org.apache.paimon.fs.Path path)
+            Path path,
+            FileFormatFactory.FormatContext formatContext)
             throws IOException {
         // open ORC file and create reader
         org.apache.hadoop.fs.Path hPath = new org.apache.hadoop.fs.Path(path.toUri());
@@ -358,6 +367,9 @@ public class OrcReaderFactory implements FormatReaderFactory {
         // configure filesystem from Paimon FileIO
         readerOptions.filesystem(new HadoopReadOnlyFileSystem(fileIO));
 
-        return OrcFile.createReader(hPath, readerOptions);
+        return new ReaderImpl(
+                hPath,
+                readerOptions,
+                formatContext == null ? null : formatContext.plaintextDataKey());
     }
 }

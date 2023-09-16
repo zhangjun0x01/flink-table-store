@@ -19,6 +19,7 @@
 package org.apache.paimon.mergetree;
 
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.io.DataFileMeta;
 
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,17 @@ public class LevelsTest {
 
     public static DataFileMeta newFile(int level) {
         return new DataFileMeta(
-                UUID.randomUUID().toString(), 0, 1, row(0), row(0), null, null, 0, 1, 0, level);
+                UUID.randomUUID().toString(),
+                0,
+                1,
+                row(0),
+                row(0),
+                null,
+                null,
+                0,
+                1,
+                0,
+                level,
+                KeyMetadata.emptyKeyMetadata());
     }
 }

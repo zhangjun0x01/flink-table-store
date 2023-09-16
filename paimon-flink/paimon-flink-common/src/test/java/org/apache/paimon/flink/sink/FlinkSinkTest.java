@@ -22,6 +22,7 @@ import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.GenericRow;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.flink.utils.MetricUtils;
 import org.apache.paimon.fs.FileIOFinder;
 import org.apache.paimon.fs.local.LocalFileIO;
@@ -279,7 +280,9 @@ public class FlinkSinkTest {
                 tablePath,
                 tableSchema,
                 options,
-                new CatalogEnvironment(Lock.emptyFactory(), null, null));
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
     }
 
     private OneInputStreamOperatorTestHarness<InternalRow, Committable> createTestHarness(

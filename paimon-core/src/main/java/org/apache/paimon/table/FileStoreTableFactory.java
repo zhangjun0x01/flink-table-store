@@ -20,6 +20,9 @@ package org.apache.paimon.table;
 
 import org.apache.paimon.CoreOptions;
 import org.apache.paimon.catalog.CatalogContext;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.operation.Lock;
@@ -67,7 +70,9 @@ public class FileStoreTableFactory {
                 tablePath,
                 tableSchema,
                 options,
-                new CatalogEnvironment(Lock.emptyFactory(), null, null));
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
     }
 
     public static FileStoreTable create(FileIO fileIO, Path tablePath, TableSchema tableSchema) {
@@ -76,15 +81,26 @@ public class FileStoreTableFactory {
                 tablePath,
                 tableSchema,
                 new Options(),
-                new CatalogEnvironment(Lock.emptyFactory(), null, null));
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
     }
 
     public static FileStoreTable create(
             FileIO fileIO,
             Path tablePath,
             TableSchema tableSchema,
-            CatalogEnvironment catalogEnvironment) {
-        return create(fileIO, tablePath, tableSchema, new Options(), catalogEnvironment);
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
+        return create(
+                fileIO,
+                tablePath,
+                tableSchema,
+                new Options(),
+                catalogEnvironment,
+                encryptionManager,
+                createKeyResult);
     }
 
     public static FileStoreTable create(
@@ -92,13 +108,26 @@ public class FileStoreTableFactory {
             Path tablePath,
             TableSchema tableSchema,
             Options dynamicOptions,
-            CatalogEnvironment catalogEnvironment) {
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
+
         FileStoreTable table =
                 tableSchema.primaryKeys().isEmpty()
                         ? new AppendOnlyFileStoreTable(
-                                fileIO, tablePath, tableSchema, catalogEnvironment)
+                                fileIO,
+                                tablePath,
+                                tableSchema,
+                                catalogEnvironment,
+                                encryptionManager,
+                                createKeyResult)
                         : new PrimaryKeyFileStoreTable(
-                                fileIO, tablePath, tableSchema, catalogEnvironment);
+                                fileIO,
+                                tablePath,
+                                tableSchema,
+                                catalogEnvironment,
+                                encryptionManager,
+                                createKeyResult);
         return table.copy(dynamicOptions.toMap());
     }
 }

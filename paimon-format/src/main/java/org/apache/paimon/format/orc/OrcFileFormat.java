@@ -50,6 +50,7 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -147,6 +148,15 @@ public class OrcFileFormat extends FileFormat {
         Properties properties = new Properties();
         options.addAllToProperties(properties);
         properties.forEach((k, v) -> orcProperties.put(IDENTIFIER + "." + k, v));
+
+        // add encryption properties to orcProperties.
+        for (Map.Entry<String, String> conf : options.toMap().entrySet()) {
+            String key = conf.getKey();
+            if (key.startsWith("encryption") || key.startsWith("hadoop.security")) {
+                orcProperties.put(IDENTIFIER + "." + key, conf.getValue());
+            }
+        }
+
         return orcProperties;
     }
 

@@ -22,6 +22,7 @@ import org.apache.paimon.data.BinaryString;
 import org.apache.paimon.data.Decimal;
 import org.apache.paimon.data.Timestamp;
 import org.apache.paimon.format.FieldStats;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.TableStatsExtractor;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
@@ -67,15 +68,18 @@ public class ParquetTableStatsExtractor implements TableStatsExtractor {
     }
 
     @Override
-    public FieldStats[] extract(FileIO fileIO, Path path) throws IOException {
-        return extractWithFileInfo(fileIO, path).getLeft();
+    public FieldStats[] extract(
+            FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
+            throws IOException {
+        return extractWithFileInfo(fileIO, path, formatContext).getLeft();
     }
 
     @Override
-    public Pair<FieldStats[], FileInfo> extractWithFileInfo(FileIO fileIO, Path path)
+    public Pair<FieldStats[], FileInfo> extractWithFileInfo(
+            FileIO fileIO, Path path, FileFormatFactory.FormatContext formatContext)
             throws IOException {
         Pair<Map<String, Statistics<?>>, FileInfo> statsPair =
-                ParquetUtil.extractColumnStats(fileIO, path);
+                ParquetUtil.extractColumnStats(fileIO, path, formatContext);
         FieldStatsCollector[] collectors = FieldStatsCollector.create(statsCollectors);
         return Pair.of(
                 IntStream.range(0, rowType.getFieldCount())

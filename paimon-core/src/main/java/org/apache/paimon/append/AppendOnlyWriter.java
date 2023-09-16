@@ -18,12 +18,15 @@
 
 package org.apache.paimon.append;
 
+import org.apache.paimon.CoreOptions;
 import org.apache.paimon.annotation.VisibleForTesting;
 import org.apache.paimon.compact.CompactManager;
 import org.apache.paimon.data.InternalRow;
 import org.apache.paimon.data.serializer.InternalRowSerializer;
 import org.apache.paimon.disk.IOManager;
 import org.apache.paimon.disk.RowBuffer;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.format.FileFormat;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.io.CompactIncrement;
@@ -76,6 +79,9 @@ public class AppendOnlyWriter implements RecordWriter<InternalRow>, MemoryOwner 
 
     private MemorySegmentPool memorySegmentPool;
     private WriterMetrics writerMetrics;
+    private final EncryptionManager encryptionManager;
+    private final KmsClient.CreateKeyResult createKeyResult;
+    private final CoreOptions options;
 
     public AppendOnlyWriter(
             FileIO fileIO,
@@ -93,7 +99,10 @@ public class AppendOnlyWriter implements RecordWriter<InternalRow>, MemoryOwner 
             boolean spillable,
             String fileCompression,
             FieldStatsCollector.Factory[] statsCollectors,
-            WriterMetrics writerMetrics) {
+            WriterMetrics writerMetrics,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult,
+            CoreOptions options) {
         this.fileIO = fileIO;
         this.schemaId = schemaId;
         this.fileFormat = fileFormat;
@@ -109,6 +118,8 @@ public class AppendOnlyWriter implements RecordWriter<InternalRow>, MemoryOwner 
         this.fileCompression = fileCompression;
         this.ioManager = ioManager;
         this.statsCollectors = statsCollectors;
+        this.encryptionManager = encryptionManager;
+        this.createKeyResult = createKeyResult;
 
         this.sinkWriter =
                 useWriteBuffer ? new BufferedSinkWriter(spillable) : new DirectSinkWriter();
@@ -119,6 +130,7 @@ public class AppendOnlyWriter implements RecordWriter<InternalRow>, MemoryOwner 
             compactAfter.addAll(increment.compactIncrement().compactAfter());
         }
         this.writerMetrics = writerMetrics;
+        this.options = options;
     }
 
     @Override
@@ -236,7 +248,10 @@ public class AppendOnlyWriter implements RecordWriter<InternalRow>, MemoryOwner 
                 pathFactory,
                 seqNumCounter,
                 fileCompression,
-                statsCollectors);
+                statsCollectors,
+                encryptionManager,
+                createKeyResult,
+                options);
     }
 
     private void trySyncLatestCompaction(boolean blocking)

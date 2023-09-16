@@ -28,9 +28,11 @@ import java.io.Serializable;
 
 /** A factory to create {@link RecordReader} for file. */
 public interface FormatReaderFactory extends Serializable {
+    RecordReader<InternalRow> createReader(
+            FileIO fileIO, Path file, FileFormatFactory.FormatContext formatContext)
+            throws IOException;
 
-    RecordReader<InternalRow> createReader(FileIO fileIO, Path file) throws IOException;
-
-    RecordReader<InternalRow> createReader(FileIO fileIO, Path file, int poolSize)
+    RecordReader<InternalRow> createReader(
+            FileIO fileIO, Path file, int poolSize, FileFormatFactory.FormatContext formatContext)
             throws IOException;
 }

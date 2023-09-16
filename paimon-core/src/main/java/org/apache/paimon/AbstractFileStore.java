@@ -20,6 +20,8 @@ package org.apache.paimon;
 
 import org.apache.paimon.data.InternalRow;
 import org.apache.paimon.deletionvectors.DeletionVectorsIndexFile;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.index.HashIndexFile;
 import org.apache.paimon.index.IndexFileHandler;
@@ -69,8 +71,10 @@ public abstract class AbstractFileStore<T> implements FileStore<T> {
     protected final CoreOptions options;
     protected final RowType partitionType;
     private final CatalogEnvironment catalogEnvironment;
-
     @Nullable private final SegmentsCache<String> writeManifestCache;
+
+    protected final EncryptionManager encryptionManager;
+    @Nullable protected KmsClient.CreateKeyResult createKeyResult;
 
     public AbstractFileStore(
             FileIO fileIO,
@@ -78,7 +82,9 @@ public abstract class AbstractFileStore<T> implements FileStore<T> {
             long schemaId,
             CoreOptions options,
             RowType partitionType,
-            CatalogEnvironment catalogEnvironment) {
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
         this.fileIO = fileIO;
         this.schemaManager = schemaManager;
         this.schemaId = schemaId;
@@ -90,6 +96,9 @@ public abstract class AbstractFileStore<T> implements FileStore<T> {
                 writeManifestCache.getBytes() == 0
                         ? null
                         : new SegmentsCache<>(options.pageSize(), writeManifestCache);
+
+        this.encryptionManager = encryptionManager;
+        this.createKeyResult = createKeyResult;
     }
 
     @Override
@@ -119,7 +128,10 @@ public abstract class AbstractFileStore<T> implements FileStore<T> {
                 options.manifestFormat(),
                 pathFactory(),
                 options.manifestTargetSize().getBytes(),
-                forWrite ? writeManifestCache : null);
+                forWrite ? writeManifestCache : null,
+                encryptionManager,
+                createKeyResult,
+                options);
     }
 
     @Override

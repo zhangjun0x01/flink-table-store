@@ -20,6 +20,7 @@ package org.apache.paimon.append;
 
 import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.BinaryRow;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.local.LocalFileIO;
 import org.apache.paimon.io.DataFileMeta;
@@ -185,6 +186,7 @@ public class AppendOnlyTableCompactionCoordinatorTest {
                 0,
                 0,
                 0,
-                0);
+                0,
+                KeyMetadata.emptyKeyMetadata());
     }
 }

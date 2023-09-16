@@ -18,8 +18,12 @@
 
 package org.apache.paimon.io;
 
+import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.format.FieldStats;
+import org.apache.paimon.format.FileFormatFactory;
 import org.apache.paimon.format.FormatWriterFactory;
 import org.apache.paimon.format.TableStatsCollector;
 import org.apache.paimon.format.TableStatsExtractor;
@@ -43,6 +47,7 @@ import java.util.function.Function;
 public abstract class StatsCollectingSingleFileWriter<T, R> extends SingleFileWriter<T, R> {
 
     @Nullable private final TableStatsExtractor tableStatsExtractor;
+    @Nullable private final String encryptionColumns;
     @Nullable private TableStatsCollector tableStatsCollector = null;
 
     public StatsCollectingSingleFileWriter(
@@ -53,8 +58,20 @@ public abstract class StatsCollectingSingleFileWriter<T, R> extends SingleFileWr
             RowType writeSchema,
             @Nullable TableStatsExtractor tableStatsExtractor,
             String compression,
-            FieldStatsCollector.Factory[] statsCollectors) {
-        super(fileIO, factory, path, converter, compression);
+            FieldStatsCollector.Factory[] statsCollectors,
+            CoreOptions options,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
+        super(
+                fileIO,
+                factory,
+                path,
+                converter,
+                compression,
+                encryptionManager,
+                createKeyResult,
+                options);
+        this.encryptionColumns = options.encryptionColumns();
         this.tableStatsExtractor = tableStatsExtractor;
         if (this.tableStatsExtractor == null) {
             this.tableStatsCollector = new TableStatsCollector(writeSchema, statsCollectors);
@@ -75,7 +92,18 @@ public abstract class StatsCollectingSingleFileWriter<T, R> extends SingleFileWr
     public FieldStats[] fieldStats() throws IOException {
         Preconditions.checkState(closed, "Cannot access metric unless the writer is closed.");
         if (tableStatsExtractor != null) {
-            return tableStatsExtractor.extract(fileIO, path);
+            if (keyMetadata != null) {
+                FileFormatFactory.FormatContext formatContext =
+                        FileFormatFactory.formatContextBuilder()
+                                .withPlaintextDataKey(keyMetadata.plaintextKey())
+                                .withAADPrefix(keyMetadata.aadPrefix())
+                                .withEncryptionColumns(encryptionColumns)
+                                .build();
+                return tableStatsExtractor.extract(fileIO, path, formatContext);
+            } else {
+                return tableStatsExtractor.extract(fileIO, path, null);
+            }
+
         } else {
             return tableStatsCollector.extract();
         }

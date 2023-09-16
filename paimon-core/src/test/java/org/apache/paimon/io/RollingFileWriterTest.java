@@ -21,6 +21,7 @@ package org.apache.paimon.io;
 import org.apache.paimon.CoreOptions;
 import org.apache.paimon.data.GenericRow;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.format.FileFormat;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.fs.local.LocalFileIO;
@@ -89,7 +90,10 @@ public class RollingFileWriterTest {
                                         CoreOptions.FILE_COMPRESSION.defaultValue(),
                                         StatsCollectorFactories.createStatsFactories(
                                                 new CoreOptions(new HashMap<>()),
-                                                SCHEMA.getFieldNames())),
+                                                SCHEMA.getFieldNames()),
+                                        new PlaintextEncryptionManager(),
+                                        null,
+                                        new CoreOptions(new HashMap<>())),
                         TARGET_FILE_SIZE);
     }
 

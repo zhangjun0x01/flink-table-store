@@ -20,6 +20,8 @@ package org.apache.paimon;
 
 import org.apache.paimon.codegen.RecordEqualiser;
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.EncryptionManager;
+import org.apache.paimon.encryption.KmsClient;
 import org.apache.paimon.format.FileFormatDiscover;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.index.HashIndexMaintainer;
@@ -83,8 +85,18 @@ public class KeyValueFileStore extends AbstractFileStore<KeyValue> {
             KeyValueFieldsExtractor keyValueFieldsExtractor,
             MergeFunctionFactory<KeyValue> mfFactory,
             String tableName,
-            CatalogEnvironment catalogEnvironment) {
-        super(fileIO, schemaManager, schemaId, options, partitionType, catalogEnvironment);
+            CatalogEnvironment catalogEnvironment,
+            EncryptionManager encryptionManager,
+            KmsClient.CreateKeyResult createKeyResult) {
+        super(
+                fileIO,
+                schemaManager,
+                schemaId,
+                options,
+                partitionType,
+                catalogEnvironment,
+                encryptionManager,
+                createKeyResult);
         this.crossPartitionUpdate = crossPartitionUpdate;
         this.bucketKeyType = bucketKeyType;
         this.keyType = keyType;
@@ -124,7 +136,9 @@ public class KeyValueFileStore extends AbstractFileStore<KeyValue> {
                 valueType,
                 newKeyComparator(),
                 mfFactory,
-                newReaderFactoryBuilder());
+                newReaderFactoryBuilder(),
+                encryptionManager,
+                options);
     }
 
     public KeyValueFileReaderFactory.Builder newReaderFactoryBuilder() {
@@ -168,7 +182,9 @@ public class KeyValueFileStore extends AbstractFileStore<KeyValue> {
                 indexFactory,
                 options,
                 keyValueFieldsExtractor,
-                tableName);
+                tableName,
+                encryptionManager,
+                createKeyResult);
     }
 
     private Map<String, FileStorePathFactory> format2PathFactory() {

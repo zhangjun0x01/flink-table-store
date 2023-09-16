@@ -20,6 +20,7 @@ package org.apache.paimon;
 
 import org.apache.paimon.data.BinaryRow;
 import org.apache.paimon.data.serializer.InternalRowSerializer;
+import org.apache.paimon.encryption.PlaintextEncryptionManager;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.FileIOFinder;
 import org.apache.paimon.fs.Path;
@@ -117,7 +118,9 @@ public class TestFileStore extends KeyValueFileStore {
                 keyValueFieldsExtractor,
                 mfFactory,
                 (new Path(root)).getName(),
-                new CatalogEnvironment(Lock.emptyFactory(), null, null));
+                new CatalogEnvironment(Lock.emptyFactory(), null, null),
+                new PlaintextEncryptionManager(),
+                null);
         this.root = root;
         this.fileIO = FileIOFinder.find(new Path(root));
         this.keySerializer = new InternalRowSerializer(keyType);

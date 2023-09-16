@@ -19,6 +19,7 @@
 package org.apache.paimon.table.source;
 
 import org.apache.paimon.data.InternalRow;
+import org.apache.paimon.encryption.KeyMetadata;
 import org.apache.paimon.io.DataFileMeta;
 import org.apache.paimon.table.BucketMode;
 
@@ -50,7 +51,8 @@ public class SplitGeneratorTest {
                 minSequence,
                 maxSequence,
                 0,
-                0);
+                0,
+                KeyMetadata.emptyKeyMetadata());
     }
 
     @Test
