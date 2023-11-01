@@ -227,7 +227,7 @@ public class FlinkCatalog extends AbstractCatalog {
 
     public CatalogBaseTable getTable(ObjectPath tablePath, long timestamp)
             throws TableNotExistException, CatalogException {
-        CatalogTable catalogTable = this.getCatalogTable(tablePath, timestamp);
+        CatalogTable catalogTable = this.getTable(tablePath);
 
         Options option = new Options();
         option.set(CoreOptions.SCAN_MODE, FROM_TIMESTAMP);
@@ -238,14 +238,9 @@ public class FlinkCatalog extends AbstractCatalog {
     @Override
     public CatalogTable getTable(ObjectPath tablePath)
             throws TableNotExistException, CatalogException {
-        return getCatalogTable(tablePath, null);
-    }
-
-    private CatalogTable getCatalogTable(ObjectPath tablePath, Long timestamp)
-            throws TableNotExistException {
         Table table;
         try {
-            table = catalog.getTable(toIdentifier(tablePath), timestamp);
+            table = catalog.getTable(toIdentifier(tablePath));
         } catch (Catalog.TableNotExistException e) {
             throw new TableNotExistException(getName(), tablePath);
         }
