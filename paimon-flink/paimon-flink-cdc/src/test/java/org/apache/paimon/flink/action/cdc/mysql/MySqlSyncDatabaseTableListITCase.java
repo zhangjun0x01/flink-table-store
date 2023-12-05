@@ -60,8 +60,8 @@ public class MySqlSyncDatabaseTableListITCase extends MySqlActionITCaseBase {
                         .withTableConfig(getBasicTableConfig())
                         .mergeShards(false)
                         .withMode(mode.configString())
-                        .includingTables("t.+|s.+")
-                        .excludingTables("ta|sa")
+                        .includingTables(".*shard_.*\\.t.+|.*shard_.*\\.s.+")
+                        .excludingTables(".*shard_.*\\.ta|.*shard_.*\\.sa")
                         .build();
         runActionWithDefaultEnv(action);
 

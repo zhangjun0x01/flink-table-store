@@ -265,11 +265,11 @@ public class CdcActionCommonUtils {
 
         // a table can be monitored only when its name meets the including pattern and doesn't
         // be excluded by excluding pattern at the same time
-        String includingPattern =
-                String.format("(%s)\\.(%s)", databasePattern, includingTablePattern);
+        //        String includingPattern =
+        //                String.format("(%s)\\.(%s)", databasePattern, includingTablePattern);
 
         if (excludedTables.isEmpty()) {
-            return includingPattern;
+            return includingTablePattern;
         }
 
         String excludingPattern =
@@ -281,6 +281,6 @@ public class CdcActionCommonUtils {
                                                 t.getDatabaseName() + "\\." + t.getObjectName()))
                         .collect(Collectors.joining("|"));
         excludingPattern = "?!" + excludingPattern;
-        return String.format("(%s)(%s)", excludingPattern, includingPattern);
+        return String.format("(%s)(%s)", excludingPattern, includingTablePattern);
     }
 }

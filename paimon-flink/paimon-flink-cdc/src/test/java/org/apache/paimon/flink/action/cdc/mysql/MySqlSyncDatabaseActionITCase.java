@@ -412,7 +412,7 @@ public class MySqlSyncDatabaseActionITCase extends MySqlActionITCaseBase {
     public void testIncludingTables() throws Exception {
         includingAndExcludingTablesImpl(
                 "paimon_sync_database_including",
-                "flink|paimon.+",
+                "paimon_sync_database_including.flink|paimon_sync_database_including.paimon.+",
                 null,
                 Arrays.asList("flink", "paimon_1", "paimon_2"),
                 Collections.singletonList("ignored"));
@@ -424,7 +424,7 @@ public class MySqlSyncDatabaseActionITCase extends MySqlActionITCaseBase {
         includingAndExcludingTablesImpl(
                 "paimon_sync_database_excluding",
                 null,
-                "flink|paimon.+",
+                "paimon_sync_database_excluding.flink|paimon_sync_database_excluding.paimon.+",
                 Collections.singletonList("sync"),
                 Arrays.asList("flink", "paimon_1", "paimon_2"));
     }
@@ -434,8 +434,8 @@ public class MySqlSyncDatabaseActionITCase extends MySqlActionITCaseBase {
     public void testIncludingAndExcludingTables() throws Exception {
         includingAndExcludingTablesImpl(
                 "paimon_sync_database_in_excluding",
-                "flink|paimon.+",
-                "paimon_1",
+                "paimon_sync_database_in_excluding.flink|paimon_sync_database_in_excluding.paimon.+",
+                "paimon_sync_database_in_excluding.paimon_1",
                 Arrays.asList("flink", "paimon_2"),
                 Arrays.asList("paimon_1", "test"));
     }

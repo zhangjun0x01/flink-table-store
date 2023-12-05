@@ -117,7 +117,7 @@ public class MySqlActionUtils {
                                                 typeMapping,
                                                 caseSensitive);
                                 Identifier identifier = Identifier.create(databaseName, tableName);
-                                if (monitorTablePredication.test(tableName)) {
+                                if (monitorTablePredication.test(databaseName + "." + tableName)) {
                                     mySqlSchemasInfo.addSchema(identifier, schema);
                                 } else {
                                     excludedTables.add(identifier);

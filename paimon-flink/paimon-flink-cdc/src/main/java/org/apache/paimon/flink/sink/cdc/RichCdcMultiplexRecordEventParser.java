@@ -77,7 +77,7 @@ public class RichCdcMultiplexRecordEventParser implements EventParser<RichCdcMul
     @Override
     public void setRawEvent(RichCdcMultiplexRecord record) {
         this.record = record;
-        this.currentTable = record.tableName();
+        this.currentTable = record.databaseName() + "." + record.tableName();
         this.shouldSynchronizeCurrentTable = shouldSynchronizeCurrentTable();
         if (shouldSynchronizeCurrentTable) {
             this.currentParser = parsers.computeIfAbsent(currentTable, t -> new RichEventParser());
