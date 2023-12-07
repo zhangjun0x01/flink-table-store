@@ -47,6 +47,7 @@ import io.debezium.time.MicroTimestamp;
 import io.debezium.time.Timestamp;
 import io.debezium.time.ZonedTimestamp;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 import org.apache.kafka.connect.data.Decimal;
@@ -180,7 +181,10 @@ public class MySqlRecordParser implements FlatMapFunction<String, RichCdcMultipl
 
         Table table = tableChange.getTable();
 
-        LinkedHashMap<String, DataType> fieldTypes = extractFieldTypes(table);
+        Tuple2<LinkedHashMap<String, DataType>, LinkedHashMap<String, String>> fields =
+                extractField(table);
+        LinkedHashMap<String, DataType> fieldTypes = fields.f0;
+        LinkedHashMap<String, String> fieldComment = fields.f1;
         List<String> primaryKeys = listCaseConvert(table.primaryKeyColumnNames(), caseSensitive);
 
         // TODO : add table comment and column comment when we upgrade flink cdc to 2.4
@@ -189,13 +193,17 @@ public class MySqlRecordParser implements FlatMapFunction<String, RichCdcMultipl
                         databaseName,
                         currentTable,
                         fieldTypes,
+                        fieldComment,
+                        table.comment(),
                         primaryKeys,
                         CdcRecord.emptyRecord()));
     }
 
-    private LinkedHashMap<String, DataType> extractFieldTypes(Table table) {
+    private Tuple2<LinkedHashMap<String, DataType>, LinkedHashMap<String, String>> extractField(
+            Table table) {
         List<Column> columns = table.columns();
         LinkedHashMap<String, DataType> fieldTypes = new LinkedHashMap<>(columns.size());
+        LinkedHashMap<String, String> fieldComments = new LinkedHashMap<>(columns.size());
         Set<String> existedFields = new HashSet<>();
         Function<String, String> columnDuplicateErrMsg =
                 columnDuplicateErrMsg(table.id().toString());
@@ -214,8 +222,10 @@ public class MySqlRecordParser implements FlatMapFunction<String, RichCdcMultipl
             dataType = dataType.copy(typeMapping.containsMode(TO_NULLABLE) || column.isOptional());
 
             fieldTypes.put(columnName, dataType);
+            fieldComments.put(columnName, column.comment());
         }
-        return fieldTypes;
+
+        return Tuple2.of(fieldTypes, fieldComments);
     }
 
     private List<RichCdcMultiplexRecord> extractRecords() {
@@ -387,6 +397,8 @@ public class MySqlRecordParser implements FlatMapFunction<String, RichCdcMultipl
                 databaseName,
                 currentTable,
                 new LinkedHashMap<>(0),
+                null,
+                null,
                 Collections.emptyList(),
                 new CdcRecord(rowKind, data));
     }

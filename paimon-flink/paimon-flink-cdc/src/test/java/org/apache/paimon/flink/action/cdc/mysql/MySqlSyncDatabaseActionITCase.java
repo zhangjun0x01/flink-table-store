@@ -24,6 +24,7 @@ import org.apache.paimon.catalog.Identifier;
 import org.apache.paimon.flink.action.MultiTablesSinkMode;
 import org.apache.paimon.options.CatalogOptions;
 import org.apache.paimon.table.FileStoreTable;
+import org.apache.paimon.types.DataField;
 import org.apache.paimon.types.DataType;
 import org.apache.paimon.types.DataTypes;
 import org.apache.paimon.types.RowType;
@@ -35,6 +36,7 @@ import org.apache.flink.core.execution.SavepointFormatType;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.streaming.api.graph.StreamGraph;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -565,6 +567,7 @@ public class MySqlSyncDatabaseActionITCase extends MySqlActionITCaseBase {
 
         Map<String, String> mySqlConfig = getBasicMySqlConfig();
         mySqlConfig.put("database-name", mySqlDatabase);
+        mySqlConfig.put("debezium.include.schema.comments", "true");
 
         MySqlSyncDatabaseAction action =
                 syncDatabaseActionBuilder(mySqlConfig)
@@ -592,7 +595,8 @@ public class MySqlSyncDatabaseActionITCase extends MySqlActionITCaseBase {
 
             // create new tables at runtime
             // synchronized table: t2, t22
-            statement.executeUpdate("CREATE TABLE t2 (k INT, v1 VARCHAR(10), PRIMARY KEY (k))");
+            statement.executeUpdate(
+                    "CREATE TABLE t2 (k INT, v1 VARCHAR(10) COMMENT 'v1 comment', PRIMARY KEY (k)) COMMENT 't2 table comment'");
             statement.executeUpdate("INSERT INTO t2 VALUES (1, 'Hi')");
 
             statement.executeUpdate("CREATE TABLE t22 LIKE t2");
@@ -613,6 +617,16 @@ public class MySqlSyncDatabaseActionITCase extends MySqlActionITCaseBase {
             assertTableNotExists("a", "ta", "t3", "t4");
 
             FileStoreTable newTable = getFileStoreTable("t2");
+
+            // check comment
+            Assertions.assertEquals("t2 table comment", newTable.comment().get());
+            List<String> comment =
+                    newTable.schema().fields().stream()
+                            .filter(f -> f.name().equals("v1"))
+                            .map(DataField::description)
+                            .collect(Collectors.toList());
+            Assertions.assertEquals("[v1 comment]", comment.toString());
+
             waitForResult(Collections.singletonList("+I[1, Hi]"), newTable, rowType, primaryKeys);
 
             newTable = getFileStoreTable("t22");

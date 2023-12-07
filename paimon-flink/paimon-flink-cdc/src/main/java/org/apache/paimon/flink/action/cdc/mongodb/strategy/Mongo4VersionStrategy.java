@@ -94,21 +94,47 @@ public class Mongo4VersionStrategy implements MongoVersionStrategy {
             String op, JsonNode fullDocument, JsonNode documentKey) throws JsonProcessingException {
         List<RichCdcMultiplexRecord> records = new ArrayList<>();
         LinkedHashMap<String, DataType> paimonFieldTypes = new LinkedHashMap<>();
+        LinkedHashMap<String, String> paimonFieldComments = new LinkedHashMap<>();
+        String tableComment = null;
 
         switch (op) {
             case OP_INSERT:
-                records.add(processRecord(fullDocument, paimonFieldTypes, RowKind.INSERT));
+                records.add(
+                        processRecord(
+                                fullDocument,
+                                paimonFieldTypes,
+                                paimonFieldComments,
+                                tableComment,
+                                RowKind.INSERT));
                 break;
             case OP_REPLACE:
             case OP_UPDATE:
                 // Before version 6.0 of MongoDB, it was not possible to obtain 'Update Before'
                 // information. Therefore, data is first deleted using the primary key '_id', and
                 // then inserted.
-                records.add(processRecord(documentKey, paimonFieldTypes, RowKind.DELETE));
-                records.add(processRecord(fullDocument, paimonFieldTypes, RowKind.INSERT));
+                records.add(
+                        processRecord(
+                                documentKey,
+                                paimonFieldTypes,
+                                paimonFieldComments,
+                                tableComment,
+                                RowKind.DELETE));
+                records.add(
+                        processRecord(
+                                fullDocument,
+                                paimonFieldTypes,
+                                paimonFieldComments,
+                                tableComment,
+                                RowKind.INSERT));
                 break;
             case OP_DELETE:
-                records.add(processRecord(documentKey, paimonFieldTypes, RowKind.DELETE));
+                records.add(
+                        processRecord(
+                                documentKey,
+                                paimonFieldTypes,
+                                paimonFieldComments,
+                                tableComment,
+                                RowKind.DELETE));
                 break;
             default:
                 throw new UnsupportedOperationException("Unknown record type: " + op);
@@ -123,13 +149,17 @@ public class Mongo4VersionStrategy implements MongoVersionStrategy {
      * @param fullDocument the JSON node containing the full document to be processed.
      * @param paimonFieldTypes a LinkedHashMap containing the field types to be used in the
      *     processing.
+     * @param paimonFieldComments
+     * @param tableComment
      * @param rowKind the kind of row to be processed (e.g., insert, update, delete).
-     * @throws JsonProcessingException if there is an error in processing the JSON document.
      * @return a RichCdcMultiplexRecord object that contains the processed record information.
+     * @throws JsonProcessingException if there is an error in processing the JSON document.
      */
     private RichCdcMultiplexRecord processRecord(
             JsonNode fullDocument,
             LinkedHashMap<String, DataType> paimonFieldTypes,
+            LinkedHashMap<String, String> paimonFieldComments,
+            String tableComment,
             RowKind rowKind)
             throws JsonProcessingException {
         Map<String, String> record =
@@ -139,10 +169,13 @@ public class Mongo4VersionStrategy implements MongoVersionStrategy {
                         caseSensitive,
                         computedColumns,
                         mongodbConfig);
+
         return new RichCdcMultiplexRecord(
                 databaseName,
                 collection,
                 paimonFieldTypes,
+                paimonFieldComments,
+                tableComment,
                 extractPrimaryKeys(),
                 new CdcRecord(rowKind, record));
     }

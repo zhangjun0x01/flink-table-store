@@ -33,6 +33,7 @@ public class RichEventParser implements EventParser<RichCdcRecord> {
     private RichCdcRecord record;
 
     private final LinkedHashMap<String, DataType> previousDataFields = new LinkedHashMap<>();
+    private final LinkedHashMap<String, String> previousComments = new LinkedHashMap<>();
 
     @Override
     public void setRawEvent(RichCdcRecord rawEvent) {
@@ -42,13 +43,19 @@ public class RichEventParser implements EventParser<RichCdcRecord> {
     @Override
     public List<DataField> parseSchemaChange() {
         List<DataField> change = new ArrayList<>();
+        LinkedHashMap<String, String> comments = record.fieldComments();
         record.fieldTypes()
                 .forEach(
                         (field, type) -> {
+                            String comment = comments.get(field);
+                            String preComment = previousComments.get(field);
+
                             DataType previous = previousDataFields.get(field);
-                            if (!Objects.equals(previous, type)) {
+                            if (!Objects.equals(previous, type)
+                                    || !Objects.equals(comment, preComment)) {
                                 previousDataFields.put(field, type);
-                                change.add(new DataField(0, field, type));
+                                previousComments.put(field, comment);
+                                change.add(new DataField(0, field, type, comment));
                             }
                         });
         return change;
