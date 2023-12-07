@@ -36,10 +36,15 @@ public class RichCdcRecord implements Serializable {
 
     private final CdcRecord cdcRecord;
     private final LinkedHashMap<String, DataType> fieldTypes;
+    private final LinkedHashMap<String, String> fieldComments;
 
-    public RichCdcRecord(CdcRecord cdcRecord, LinkedHashMap<String, DataType> fieldTypes) {
+    public RichCdcRecord(
+            CdcRecord cdcRecord,
+            LinkedHashMap<String, DataType> fieldTypes,
+            LinkedHashMap<String, String> fieldComments) {
         this.cdcRecord = cdcRecord;
         this.fieldTypes = fieldTypes;
+        this.fieldComments = fieldComments;
     }
 
     public boolean hasPayload() {
@@ -52,6 +57,10 @@ public class RichCdcRecord implements Serializable {
 
     public LinkedHashMap<String, DataType> fieldTypes() {
         return fieldTypes;
+    }
+
+    public LinkedHashMap<String, String> fieldComments() {
+        return fieldComments;
     }
 
     public CdcRecord toCdcRecord() {
@@ -89,20 +98,22 @@ public class RichCdcRecord implements Serializable {
 
         private final RowKind kind;
         private final LinkedHashMap<String, DataType> fieldTypes = new LinkedHashMap<>();
+        private final LinkedHashMap<String, String> fieldComments = new LinkedHashMap<>();
         private final Map<String, String> fieldValues = new HashMap<>();
 
         public Builder(RowKind kind) {
             this.kind = kind;
         }
 
-        public Builder field(String name, DataType type, String value) {
+        public Builder field(String name, DataType type, String value, String comment) {
             fieldTypes.put(name, type);
             fieldValues.put(name, value);
+            fieldComments.put(name, comment);
             return this;
         }
 
         public RichCdcRecord build() {
-            return new RichCdcRecord(new CdcRecord(kind, fieldValues), fieldTypes);
+            return new RichCdcRecord(new CdcRecord(kind, fieldValues), fieldTypes, fieldComments);
         }
     }
 }

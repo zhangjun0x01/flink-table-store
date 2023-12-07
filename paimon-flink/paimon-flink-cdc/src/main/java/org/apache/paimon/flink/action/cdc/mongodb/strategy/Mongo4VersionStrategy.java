@@ -140,7 +140,6 @@ public class Mongo4VersionStrategy implements MongoVersionStrategy {
                         computedColumns,
                         mongodbConfig);
 
-
         return new RichCdcMultiplexRecord(
                 databaseName,
                 collection,

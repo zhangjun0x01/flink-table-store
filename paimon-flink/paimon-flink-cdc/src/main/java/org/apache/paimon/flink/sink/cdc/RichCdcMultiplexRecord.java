@@ -21,6 +21,7 @@ package org.apache.paimon.flink.sink.cdc;
 import org.apache.paimon.types.DataType;
 
 import javax.annotation.Nullable;
+
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,10 +33,8 @@ public class RichCdcMultiplexRecord implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Nullable private final String databaseName;
-    @Nullable
-    private final String tableName;
-    @Nullable
-    private final String tableComment;
+    @Nullable private final String tableName;
+    @Nullable private final String tableComment;
     private final LinkedHashMap<String, DataType> fieldTypes;
     private final LinkedHashMap<String, String> fieldComments;
     private final List<String> primaryKeys;
@@ -85,7 +84,7 @@ public class RichCdcMultiplexRecord implements Serializable {
     }
 
     public RichCdcRecord toRichCdcRecord() {
-        return new RichCdcRecord(cdcRecord, fieldTypes);
+        return new RichCdcRecord(cdcRecord, fieldTypes, fieldComments);
     }
 
     @Override
@@ -124,6 +123,4 @@ public class RichCdcMultiplexRecord implements Serializable {
                 + cdcRecord
                 + '}';
     }
-
-
 }

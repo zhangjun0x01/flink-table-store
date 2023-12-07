@@ -205,7 +205,7 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
             LinkedHashMap<String, DataType> paimonFieldTypes) {
         String databaseName = getDatabaseName();
         String tableName = getTableName();
-        String tableComment= getTableComment();
+        String tableComment = getTableComment();
         paimonFieldTypes =
                 mapKeyCaseConvert(
                         paimonFieldTypes,
@@ -251,7 +251,6 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
         JsonNode node = root.get(FIELD_TABLE_COMMENT);
         return isNull(node) ? null : node.asText();
     }
-
 
     @Nullable
     protected String getDatabaseName() {
