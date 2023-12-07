@@ -139,10 +139,14 @@ public class Mongo4VersionStrategy implements MongoVersionStrategy {
                         caseSensitive,
                         computedColumns,
                         mongodbConfig);
+
+
         return new RichCdcMultiplexRecord(
                 databaseName,
                 collection,
                 paimonFieldTypes,
+                null,
+                null,
                 extractPrimaryKeys(),
                 new CdcRecord(rowKind, record));
     }

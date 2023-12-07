@@ -46,16 +46,23 @@ public class NewTableSchemaBuilder implements Serializable {
         builder.options(tableConfig);
 
         String tableName = record.tableName();
+        String tableComment = record.tableComment();
         tableName = tableName == null ? "UNKNOWN" : tableName;
         LinkedHashMap<String, DataType> fieldTypes =
                 mapKeyCaseConvert(
                         record.fieldTypes(), caseSensitive, columnDuplicateErrMsg(tableName));
 
+        LinkedHashMap<String, String> fieldComments =
+                mapKeyCaseConvert(
+                        record.fieldComments(), caseSensitive, columnDuplicateErrMsg(tableName));
+
         for (Map.Entry<String, DataType> entry : fieldTypes.entrySet()) {
-            builder.column(entry.getKey(), entry.getValue());
+            builder.column(entry.getKey(), entry.getValue(), fieldComments.get(entry.getKey()));
         }
 
         builder.primaryKey(listCaseConvert(record.primaryKeys(), caseSensitive));
+
+        builder.comment(tableComment);
 
         return Optional.of(builder.build());
     }

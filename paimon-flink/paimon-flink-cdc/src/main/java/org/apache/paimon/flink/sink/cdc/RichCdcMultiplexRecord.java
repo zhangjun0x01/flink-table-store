@@ -21,7 +21,6 @@ package org.apache.paimon.flink.sink.cdc;
 import org.apache.paimon.types.DataType;
 
 import javax.annotation.Nullable;
-
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,8 +32,12 @@ public class RichCdcMultiplexRecord implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Nullable private final String databaseName;
-    @Nullable private final String tableName;
+    @Nullable
+    private final String tableName;
+    @Nullable
+    private final String tableComment;
     private final LinkedHashMap<String, DataType> fieldTypes;
+    private final LinkedHashMap<String, String> fieldComments;
     private final List<String> primaryKeys;
     private final CdcRecord cdcRecord;
 
@@ -42,11 +45,15 @@ public class RichCdcMultiplexRecord implements Serializable {
             @Nullable String databaseName,
             @Nullable String tableName,
             LinkedHashMap<String, DataType> fieldTypes,
+            LinkedHashMap<String, String> fieldComments,
+            String tableComment,
             List<String> primaryKeys,
             CdcRecord cdcRecord) {
         this.databaseName = databaseName;
         this.tableName = tableName;
         this.fieldTypes = fieldTypes;
+        this.fieldComments = fieldComments;
+        this.tableComment = tableComment;
         this.primaryKeys = primaryKeys;
         this.cdcRecord = cdcRecord;
     }
@@ -61,8 +68,16 @@ public class RichCdcMultiplexRecord implements Serializable {
         return tableName;
     }
 
+    public String tableComment() {
+        return tableComment;
+    }
+
     public LinkedHashMap<String, DataType> fieldTypes() {
         return fieldTypes;
+    }
+
+    public LinkedHashMap<String, String> fieldComments() {
+        return fieldComments;
     }
 
     public List<String> primaryKeys() {
@@ -109,4 +124,6 @@ public class RichCdcMultiplexRecord implements Serializable {
                 + cdcRecord
                 + '}';
     }
+
+
 }
