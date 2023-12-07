@@ -73,7 +73,6 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
     private static final Logger LOG = LoggerFactory.getLogger(RecordParser.class);
 
     protected static final String FIELD_TABLE = "table";
-
     protected static final String FIELD_TABLE_COMMENT = "comment";
     protected static final String FIELD_DATABASE = "database";
     protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -194,15 +193,17 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
     protected void processRecord(
             JsonNode jsonNode, RowKind rowKind, List<RichCdcMultiplexRecord> records) {
         LinkedHashMap<String, DataType> paimonFieldTypes = new LinkedHashMap<>(jsonNode.size());
+        LinkedHashMap<String, String> paimonFieldComments = new LinkedHashMap<>(jsonNode.size());
         Map<String, String> rowData = this.extractRowData(jsonNode, paimonFieldTypes);
-        records.add(createRecord(rowKind, rowData, paimonFieldTypes));
+        records.add(createRecord(rowKind, rowData, paimonFieldTypes, paimonFieldComments));
     }
 
     /** Handle case sensitivity here. */
     private RichCdcMultiplexRecord createRecord(
             RowKind rowKind,
             Map<String, String> data,
-            LinkedHashMap<String, DataType> paimonFieldTypes) {
+            LinkedHashMap<String, DataType> paimonFieldTypes,
+            LinkedHashMap<String, String> paimonFieldComments) {
         String databaseName = getDatabaseName();
         String tableName = getTableName();
         String tableComment = getTableComment();
@@ -214,13 +215,11 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
         data = mapKeyCaseConvert(data, caseSensitive, recordKeyDuplicateErrMsg(data));
         List<String> primaryKeys = listCaseConvert(extractPrimaryKeys(), caseSensitive);
 
-        LinkedHashMap<String, String> fieldComments = null;
-
         return new RichCdcMultiplexRecord(
                 databaseName,
                 tableName,
                 paimonFieldTypes,
-                fieldComments,
+                paimonFieldComments,
                 tableComment,
                 primaryKeys,
                 new CdcRecord(rowKind, data));
