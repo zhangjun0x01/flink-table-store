@@ -18,6 +18,9 @@
 
 package org.apache.paimon.flink.sink.cdc;
 
+import org.apache.paimon.catalog.Catalog;
+import org.apache.paimon.catalog.Identifier;
+import org.apache.paimon.schema.SchemaChange;
 import org.apache.paimon.types.DataField;
 
 import org.apache.flink.api.java.typeutils.ListTypeInfo;
@@ -25,6 +28,8 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -39,15 +44,24 @@ import java.util.List;
  */
 public class CdcParsingProcessFunction<T> extends ProcessFunction<T, CdcRecord> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CdcParsingProcessFunction.class);
+
     public static final OutputTag<List<DataField>> NEW_DATA_FIELD_LIST_OUTPUT_TAG =
             new OutputTag<>("new-data-field-list", new ListTypeInfo<>(DataField.class));
 
     private final EventParser.Factory<T> parserFactory;
+    private final Catalog.Loader catalogLoader;
+    private final Identifier identifier;
 
     private transient EventParser<T> parser;
 
-    public CdcParsingProcessFunction(EventParser.Factory<T> parserFactory) {
+    public CdcParsingProcessFunction(
+            EventParser.Factory<T> parserFactory,
+            Catalog.Loader catalogLoader,
+            Identifier identifier) {
         this.parserFactory = parserFactory;
+        this.catalogLoader = catalogLoader;
+        this.identifier = identifier;
     }
 
     @Override
@@ -63,6 +77,24 @@ public class CdcParsingProcessFunction<T> extends ProcessFunction<T, CdcRecord> 
         if (!schemaChange.isEmpty()) {
             context.output(NEW_DATA_FIELD_LIST_OUTPUT_TAG, schemaChange);
         }
+
+        parser.parseTableComment()
+                .ifPresent(
+                        c -> {
+                            try {
+                                SchemaChange updateTableComment =
+                                        SchemaChange.updateTableComment(c);
+                                catalogLoader
+                                        .load()
+                                        .alterTable(identifier, updateTableComment, true);
+                            } catch (Exception e) {
+                                LOG.error(
+                                        "Cannot change table ({}) comment.",
+                                        identifier.getFullName(),
+                                        e);
+                            }
+                        });
+
         parser.parseRecords().forEach(collector::collect);
     }
 }

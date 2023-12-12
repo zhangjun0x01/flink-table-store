@@ -20,6 +20,7 @@ package org.apache.paimon.flink.sink.cdc;
 
 import org.apache.paimon.catalog.Catalog;
 import org.apache.paimon.catalog.Identifier;
+import org.apache.paimon.schema.SchemaChange;
 import org.apache.paimon.types.DataField;
 
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -107,11 +108,27 @@ public class CdcDynamicTableParsingProcessFunction<T> extends ProcessFunction<T,
                         });
 
         List<DataField> schemaChange = parser.parseSchemaChange();
-        if (schemaChange.size() > 0) {
+        if (!schemaChange.isEmpty()) {
             context.output(
                     DYNAMIC_SCHEMA_CHANGE_OUTPUT_TAG,
                     Tuple2.of(Identifier.create(database, tableName), schemaChange));
         }
+
+        parser.parseTableComment()
+                .ifPresent(
+                        c -> {
+                            Identifier identifier = new Identifier(database, tableName);
+                            try {
+                                SchemaChange updateTableComment =
+                                        SchemaChange.updateTableComment(c);
+                                catalog.alterTable(identifier, updateTableComment, true);
+                            } catch (Exception e) {
+                                LOG.error(
+                                        "Cannot change table ({}) comment.",
+                                        identifier.getFullName(),
+                                        e);
+                            }
+                        });
 
         parser.parseRecords()
                 .forEach(

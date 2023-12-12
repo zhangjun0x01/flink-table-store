@@ -69,6 +69,7 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
     private static final Logger LOG = LoggerFactory.getLogger(RecordParser.class);
 
     protected static final String FIELD_TABLE = "table";
+    protected static final String FIELD_TABLE_COMMENT = "comment";
     protected static final String FIELD_DATABASE = "database";
     protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -175,17 +176,20 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
     protected void processRecord(
             JsonNode jsonNode, RowKind rowKind, List<RichCdcMultiplexRecord> records) {
         LinkedHashMap<String, DataType> paimonFieldTypes = new LinkedHashMap<>(jsonNode.size());
+        LinkedHashMap<String, String> paimonFieldComments = new LinkedHashMap<>(jsonNode.size());
         Map<String, String> rowData = this.extractRowData(jsonNode, paimonFieldTypes);
-        records.add(createRecord(rowKind, rowData, paimonFieldTypes));
+        records.add(createRecord(rowKind, rowData, paimonFieldTypes, paimonFieldComments));
     }
 
     /** Handle case sensitivity here. */
     private RichCdcMultiplexRecord createRecord(
             RowKind rowKind,
             Map<String, String> data,
-            LinkedHashMap<String, DataType> paimonFieldTypes) {
+            LinkedHashMap<String, DataType> paimonFieldTypes,
+            LinkedHashMap<String, String> paimonFieldComments) {
         String databaseName = getDatabaseName();
         String tableName = getTableName();
+        String tableComment = getTableComment();
         paimonFieldTypes =
                 mapKeyCaseConvert(
                         paimonFieldTypes,
@@ -198,6 +202,8 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
                 databaseName,
                 tableName,
                 paimonFieldTypes,
+                paimonFieldComments,
+                tableComment,
                 primaryKeys,
                 new CdcRecord(rowKind, data));
     }
@@ -219,6 +225,12 @@ public abstract class RecordParser implements FlatMapFunction<String, RichCdcMul
     @Nullable
     protected String getTableName() {
         JsonNode node = root.get(FIELD_TABLE);
+        return isNull(node) ? null : node.asText();
+    }
+
+    @Nullable
+    protected String getTableComment() {
+        JsonNode node = root.get(FIELD_TABLE_COMMENT);
         return isNull(node) ? null : node.asText();
     }
 

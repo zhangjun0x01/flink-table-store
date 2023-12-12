@@ -29,12 +29,10 @@ import com.ververica.cdc.connectors.mysql.source.MySqlSourceBuilder;
 import com.ververica.cdc.connectors.mysql.source.config.MySqlSourceOptions;
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffset;
 import com.ververica.cdc.connectors.mysql.source.offset.BinlogOffsetBuilder;
-import com.ververica.cdc.connectors.mysql.table.JdbcUrlUtils;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
 import com.ververica.cdc.debezium.table.DebeziumOptions;
-import org.apache.flink.configuration.ConfigOption;
-import org.apache.flink.configuration.ConfigOptions;
+import com.ververica.cdc.debezium.utils.JdbcUrlUtils;
 import org.apache.flink.configuration.Configuration;
 import org.apache.kafka.connect.json.JsonConverterConfig;
 import org.slf4j.Logger;
@@ -59,13 +57,6 @@ import static org.apache.paimon.flink.action.cdc.TypeMapping.TypeMappingMode.TIN
 public class MySqlActionUtils {
 
     private static final Logger LOG = LoggerFactory.getLogger(MySqlActionUtils.class);
-
-    public static final ConfigOption<Boolean> SCAN_NEWLY_ADDED_TABLE_ENABLED =
-            ConfigOptions.key("scan.newly-added-table.enabled")
-                    .booleanType()
-                    .defaultValue(true)
-                    .withDescription(
-                            "Whether capture the scan the newly added tables or not, by default is true.");
 
     static Connection getConnection(Configuration mySqlConfig, Map<String, String> jdbcProperties)
             throws Exception {
@@ -223,13 +214,7 @@ public class MySqlActionUtils {
         JsonDebeziumDeserializationSchema schema =
                 new JsonDebeziumDeserializationSchema(true, customConverterConfigs);
 
-        boolean scanNewlyAddedTables = mySqlConfig.get(SCAN_NEWLY_ADDED_TABLE_ENABLED);
-
-        return sourceBuilder
-                .deserializer(schema)
-                .includeSchemaChanges(true)
-                .scanNewlyAddedTableEnabled(scanNewlyAddedTables)
-                .build();
+        return sourceBuilder.deserializer(schema).includeSchemaChanges(true).build();
     }
 
     // see

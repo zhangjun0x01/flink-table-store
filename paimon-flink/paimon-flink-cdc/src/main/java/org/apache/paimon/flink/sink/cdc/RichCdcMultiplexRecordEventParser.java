@@ -105,6 +105,11 @@ public class RichCdcMultiplexRecordEventParser implements EventParser<RichCdcMul
     }
 
     @Override
+    public Optional<String> parseTableComment() {
+        return shouldSynchronizeCurrentTable ? currentParser.parseTableComment() : Optional.empty();
+    }
+
+    @Override
     public List<CdcRecord> parseRecords() {
         return shouldSynchronizeCurrentTable
                 ? currentParser.parseRecords()

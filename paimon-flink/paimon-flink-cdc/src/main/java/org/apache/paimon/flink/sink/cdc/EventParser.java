@@ -65,6 +65,15 @@ public interface EventParser<T> {
         return Optional.empty();
     }
 
+    /**
+     * Parse newly added table schema from event.
+     *
+     * @return empty if there is no table comment
+     */
+    default Optional<String> parseTableComment() {
+        return Optional.empty();
+    }
+
     /** Factory to create an {@link EventParser}. */
     interface Factory<T> extends Serializable {
 

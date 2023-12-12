@@ -194,6 +194,7 @@ public class SparkReadITCase extends SparkReadTestBase {
                         String.format(
                                 "[[%s"
                                         + "PARTITIONED BY (a)\n"
+                                        + "COMMENT ''\n"
                                         + "TBLPROPERTIES (\n"
                                         + "  'path' = '%s')\n"
                                         + "]]",
@@ -220,6 +221,7 @@ public class SparkReadITCase extends SparkReadTestBase {
                 .isEqualTo(
                         String.format(
                                 "[[%s"
+                                        + "COMMENT ''\n"
                                         + "TBLPROPERTIES (\n"
                                         + "  'file.format' = 'parquet',\n"
                                         + "  'path' = '%s')\n"
@@ -245,7 +247,9 @@ public class SparkReadITCase extends SparkReadTestBase {
         assertThat(spark.sql("SHOW CREATE TABLE t_pk_as").collectAsList().toString())
                 .isEqualTo(
                         String.format(
-                                "[[%sTBLPROPERTIES (\n  'path' = '%s',\n  'primary-key' = 'a')\n]]",
+                                "[[%s"
+                                        + "COMMENT ''\n"
+                                        + "TBLPROPERTIES (\n  'path' = '%s',\n  'primary-key' = 'a')\n]]",
                                 showCreateString("t_pk_as", "a BIGINT", "b STRING", "c STRING"),
                                 new Path(warehousePath, "default.db/t_pk_as")));
         List<Row> resultPk = spark.sql("SELECT * FROM t_pk_as").collectAsList();
@@ -271,6 +275,7 @@ public class SparkReadITCase extends SparkReadTestBase {
                         String.format(
                                 "[[%s"
                                         + "PARTITIONED BY (dt)\n"
+                                        + "COMMENT ''\n"
                                         + "TBLPROPERTIES (\n"
                                         + "  'path' = '%s',\n"
                                         + "  'primary-key' = 'dt,hh')\n"

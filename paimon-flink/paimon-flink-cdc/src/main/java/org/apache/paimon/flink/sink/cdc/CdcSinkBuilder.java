@@ -98,7 +98,9 @@ public class CdcSinkBuilder<T> {
 
         SingleOutputStreamOperator<CdcRecord> parsed =
                 input.forward()
-                        .process(new CdcParsingProcessFunction<>(parserFactory))
+                        .process(
+                                new CdcParsingProcessFunction<>(
+                                        parserFactory, catalogLoader, identifier))
                         .setParallelism(input.getParallelism());
 
         DataStream<Void> schemaChangeProcessFunction =
