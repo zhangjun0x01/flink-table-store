@@ -557,7 +557,7 @@ public class CoreOptions implements Serializable {
     public static final ConfigOption<Boolean> STREAMING_READ_OVERWRITE =
             key("streaming-read-overwrite")
                     .booleanType()
-                    .defaultValue(false)
+                    .defaultValue(true)
                     .withDescription(
                             "Whether to read the changes from overwrite in streaming mode. Cannot be set to true when "
                                     + "changelog producer is full-compaction or lookup because it will read duplicated changes.");
