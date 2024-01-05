@@ -167,6 +167,7 @@ public class CdcActionITCaseBase extends ActionITCaseBase {
             args.add(argKey);
             args.add(String.format("%s=%s", entry.getKey(), entry.getValue()));
         }
+        args.add(String.format("%s=%s", "file.format", "parquet"));
         return args;
     }
 
