@@ -20,6 +20,7 @@ package org.apache.paimon.catalog;
 
 import org.apache.paimon.schema.Schema;
 import org.apache.paimon.schema.SchemaChange;
+import org.apache.paimon.schema.TableSchema;
 import org.apache.paimon.table.Table;
 
 import org.apache.paimon.shade.caffeine2.com.github.benmanes.caffeine.cache.Cache;
@@ -34,13 +35,13 @@ import java.util.Map;
 import java.util.Optional;
 
 /** Class that wraps an paimon catalog to cache tables. */
-public abstract class CacheCatalog extends AbstractCatalog {
+public class CacheCatalog extends AbstractCatalog {
 
     protected final AbstractCatalog catalog;
     protected final long expirationIntervalMillis;
     protected final Cache<Identifier, Table> tableCache;
 
-    protected CacheCatalog(Catalog catalog, long expirationIntervalMillis) {
+    private CacheCatalog(Catalog catalog, long expirationIntervalMillis) {
         super(((AbstractCatalog) catalog).fileIO(), ((AbstractCatalog) catalog).catalogOptions);
         this.catalog = (AbstractCatalog) catalog;
         this.expirationIntervalMillis = expirationIntervalMillis;
@@ -49,7 +50,7 @@ public abstract class CacheCatalog extends AbstractCatalog {
 
     public static Catalog wrap(Catalog catalog, long expirationIntervalMillis) {
         AbstractCatalog abstractCatalog = (AbstractCatalog) catalog;
-        return new CacheCatalogImpl(abstractCatalog, expirationIntervalMillis);
+        return new CacheCatalog(abstractCatalog, expirationIntervalMillis);
     }
 
     @Override
@@ -165,6 +166,62 @@ public abstract class CacheCatalog extends AbstractCatalog {
             throws TableNotExistException, PartitionNotExistException {
         catalog.dropPartition(identifier, partitions);
         invalidateTable(identifier);
+    }
+
+    @Override
+    protected boolean databaseExistsImpl(String databaseName) {
+        return catalog.databaseExistsImpl(databaseName);
+    }
+
+    @Override
+    protected Map<String, String> loadDatabasePropertiesImpl(String name) {
+        return catalog.loadDatabasePropertiesImpl(name);
+    }
+
+    @Override
+    protected void createDatabaseImpl(String name, Map<String, String> properties) {
+        catalog.createDatabaseImpl(name, properties);
+    }
+
+    @Override
+    protected void dropDatabaseImpl(String name) {
+        catalog.dropDatabaseImpl(name);
+    }
+
+    @Override
+    protected List<String> listTablesImpl(String databaseName) {
+        return catalog.listTablesImpl(databaseName);
+    }
+
+    @Override
+    protected void dropTableImpl(Identifier identifier) {
+        catalog.dropTableImpl(identifier);
+    }
+
+    @Override
+    protected void createTableImpl(Identifier identifier, Schema schema) {
+        catalog.createTableImpl(identifier, schema);
+    }
+
+    @Override
+    protected void renameTableImpl(Identifier fromTable, Identifier toTable) {
+        catalog.renameTableImpl(fromTable, toTable);
+    }
+
+    @Override
+    protected void alterTableImpl(Identifier identifier, List<SchemaChange> changes)
+            throws TableNotExistException, ColumnAlreadyExistException, ColumnNotExistException {
+        catalog.alterTableImpl(identifier, changes);
+    }
+
+    @Override
+    public String warehouse() {
+        return catalog.warehouse();
+    }
+
+    @Override
+    protected TableSchema getDataTableSchema(Identifier identifier) throws TableNotExistException {
+        return catalog.getDataTableSchema(identifier);
     }
 
     @Override
